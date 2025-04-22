@@ -25,21 +25,23 @@ export default function Summary() {
   }, []);
 
   const exportToCSV = () => {
-    const headers = ['Luogo', 'Data', 'Totale Spese'];
-    
-    // Create CSV content
-    let csvContent = headers.join(',') + '\n';
-    
+    // Colonne: Luogo;Data;Importo;Descrizione
+    const headers = ['Luogo', 'Data', 'Importo', 'Descrizione'];
+    let csvContent = headers.join(';') + '\n';
+
+    // Ogni riga deve essere una singola spesa della trasferta
     trips.forEach(trip => {
-      const row = [
-        trip.location,
-        new Date(trip.date).toLocaleDateString('it-IT'),
-        trip.expenses.reduce((sum: number, exp: any) => sum + Number(exp.amount), 0).toFixed(2)
-      ];
-      csvContent += row.join(',') + '\n';
+      trip.expenses.forEach((exp: any) => {
+        const row = [
+          trip.location,
+          new Date(trip.date).toLocaleDateString('it-IT'),
+          Number(exp.amount).toFixed(2),
+          (typeof exp.comment === 'string' ? exp.comment.replace(/[\n\r;]/g, ' ') : '')
+        ];
+        csvContent += row.join(';') + '\n';
+      });
     });
-    
-    // Create and download the file
+
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
