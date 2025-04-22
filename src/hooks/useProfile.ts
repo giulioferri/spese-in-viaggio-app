@@ -31,7 +31,7 @@ export function useProfile() {
 
   const setProfile = (updater: UserProfile | ((p: UserProfile) => UserProfile)) => {
     setProfileState(prev =>
-      typeof updater === "function" ? (updater as any)(prev) : updater
+      typeof updater === "function" ? updater(prev) : updater
     );
   };
 

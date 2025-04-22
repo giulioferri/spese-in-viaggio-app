@@ -1,5 +1,5 @@
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -24,8 +24,11 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   // When modal opens, sync with actual profile
-  // This prevents temp changes from being immediately saved
-  if (open && tempProfile.palette !== profile.palette) setTempProfile(profile);
+  useEffect(() => {
+    if (open) {
+      setTempProfile(profile);
+    }
+  }, [open, profile]);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
