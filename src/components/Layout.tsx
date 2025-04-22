@@ -1,7 +1,7 @@
 
 import { Outlet } from "react-router-dom";
 import { Link } from "react-router-dom";
-import { Home, PieChart, User } from "lucide-react";
+import { Home, PieChart, User, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import ProfileModal from "./ProfileModal";
@@ -10,7 +10,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 export default function Layout() {
   const [openProfile, setOpenProfile] = useState(false);
-  const { profile } = useProfile();
+  const { profile, isLoading } = useProfile();
 
   return (
     <div className="min-h-screen flex flex-col bg-secondary/20">
@@ -26,7 +26,9 @@ export default function Layout() {
               aria-label="Profilo utente"
               onClick={() => setOpenProfile(true)}
             >
-              {profile.photo ? (
+              {isLoading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : profile.photo ? (
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={profile.photo} />
                   <AvatarFallback>
@@ -67,4 +69,3 @@ export default function Layout() {
     </div>
   );
 }
-

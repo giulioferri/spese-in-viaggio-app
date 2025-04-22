@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useProfile } from "@/hooks/useProfile";
 import { Palette, User, Image } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 type Props = {
   open: boolean;
@@ -18,9 +19,9 @@ const paletteOptions = [
 ];
 
 export default function ProfileModal({ open, onOpenChange }: Props) {
-  const { profile, setProfile } = useProfile();
+  const { profile, setProfile, isLoading, error } = useProfile();
   const [tempProfile, setTempProfile] = useState(profile);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // When modal opens, sync with actual profile
@@ -38,7 +39,6 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
         setTempProfile(prev => ({ ...prev, photo: ev.target?.result as string }));
       };
       reader.readAsDataURL(file);
-      setPhotoFile(file);
     }
   };
 
@@ -46,15 +46,53 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
     setTempProfile(prev => ({ ...prev, palette: value }));
   };
 
-  const handleSave = () => {
-    setProfile(tempProfile);
-    onOpenChange(false);
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await setProfile(tempProfile);
+      onOpenChange(false);
+    } catch (err) {
+      console.error("Error saving profile:", err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleRemovePhoto = () => {
     setTempProfile(prev => ({ ...prev, photo: undefined }));
     if (inputRef.current) inputRef.current.value = "";
   };
+
+  if (isLoading) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-sm w-full">
+          <div className="flex flex-col items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="mt-2">Caricamento profilo...</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  if (error) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-sm w-full">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Errore</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p>{error}</p>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => onOpenChange(false)}>Chiudi</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -122,11 +160,20 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
         </div>
         <DialogFooter className="mt-4">
           <DialogClose asChild>
-            <Button variant="ghost">
+            <Button variant="ghost" disabled={isSaving}>
               Annulla
             </Button>
           </DialogClose>
-          <Button onClick={handleSave}>Salva</Button>
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Salvataggio...
+              </>
+            ) : (
+              "Salva"
+            )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
