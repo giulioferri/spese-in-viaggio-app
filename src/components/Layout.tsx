@@ -1,10 +1,17 @@
 
 import { Outlet } from "react-router-dom";
 import { Link } from "react-router-dom";
-import { Home, PieChart } from "lucide-react";
+import { Home, PieChart, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import ProfileModal from "./ProfileModal";
+import { useProfile } from "@/hooks/useProfile";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 export default function Layout() {
+  const [openProfile, setOpenProfile] = useState(false);
+  const { profile } = useProfile();
+
   return (
     <div className="min-h-screen flex flex-col bg-secondary/20">
       {/* Header */}
@@ -12,13 +19,27 @@ export default function Layout() {
         <div className="container flex justify-between items-center">
           <h1 className="text-xl font-bold">Spese Trasferta</h1>
           <div className="flex items-center gap-2">
-            {/* User profile button placeholder */}
-            <Button variant="outline" size="icon" className="rounded-full">
-              <span className="sr-only">Profilo utente</span>
-              👤
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-full"
+              aria-label="Profilo utente"
+              onClick={() => setOpenProfile(true)}
+            >
+              {profile.photo ? (
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={profile.photo} />
+                  <AvatarFallback>
+                    <User size={20} />
+                  </AvatarFallback>
+                </Avatar>
+              ) : (
+                <User size={22} />
+              )}
             </Button>
           </div>
         </div>
+        <ProfileModal open={openProfile} onOpenChange={setOpenProfile} />
       </header>
 
       {/* Main content */}
@@ -46,3 +67,4 @@ export default function Layout() {
     </div>
   );
 }
+

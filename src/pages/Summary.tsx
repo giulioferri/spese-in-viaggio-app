@@ -29,13 +29,15 @@ export default function Summary() {
     const headers = ['Luogo', 'Data', 'Importo', 'Descrizione'];
     let csvContent = headers.join(';') + '\n';
 
-    // Ogni riga deve essere una singola spesa della trasferta
     trips.forEach(trip => {
       trip.expenses.forEach((exp: any) => {
+        const euroAmount = Number(exp.amount)
+          .toFixed(2)
+          .replace('.', ','); // Virgola come separatore decimale
         const row = [
           trip.location,
           new Date(trip.date).toLocaleDateString('it-IT'),
-          Number(exp.amount).toFixed(2),
+          euroAmount,
           (typeof exp.comment === 'string' ? exp.comment.replace(/[\n\r;]/g, ' ') : '')
         ];
         csvContent += row.join(';') + '\n';
