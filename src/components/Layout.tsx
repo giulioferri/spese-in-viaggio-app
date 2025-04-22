@@ -1,8 +1,7 @@
 
 import { Outlet } from "react-router-dom";
-import { UserButton } from "@clerk/clerk-react";
 import { Link } from "react-router-dom";
-import { Home, PieChart, LogOut } from "lucide-react";
+import { Home, PieChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Layout() {
@@ -13,7 +12,11 @@ export default function Layout() {
         <div className="container flex justify-between items-center">
           <h1 className="text-xl font-bold">Spese Trasferta</h1>
           <div className="flex items-center gap-2">
-            <UserButton />
+            {/* User profile button placeholder */}
+            <Button variant="outline" size="icon" className="rounded-full">
+              <span className="sr-only">Profilo utente</span>
+              👤
+            </Button>
           </div>
         </div>
       </header>
