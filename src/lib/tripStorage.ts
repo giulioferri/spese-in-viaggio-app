@@ -42,12 +42,14 @@ export const getTrips = async (): Promise<Trip[]> => {
 
 // Save a trip (insert or update if exists)
 export const saveTrip = async (trip: Omit<Trip, "expenses">): Promise<string | null> => {
+  // Ensure the user_id field is properly set to the current authenticated user
   const { data, error } = await supabase
     .from('trips')
     .upsert({
       id: trip.id,
       location: trip.location,
       date: trip.date, // ISO "yyyy-MM-dd"
+      // user_id will be set automatically by the trigger on the server
     }, { onConflict: "location,date" })
     .select()
     .maybeSingle();

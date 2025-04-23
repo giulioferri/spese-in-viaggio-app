@@ -1,5 +1,6 @@
 
 
+
 -- Create profiles table for storing user profiles
 create table if not exists public.profiles (
   id text primary key,
@@ -39,4 +40,20 @@ with check (
     select location from public.trips where user_id = auth.uid()
   )
 );
+
+-- Create trigger to set user_id on trips
+CREATE OR REPLACE FUNCTION public.set_user_id_on_trip_insert()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.user_id = auth.uid();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create trigger on trips table
+DROP TRIGGER IF EXISTS set_user_id_on_trip_insert ON public.trips;
+CREATE TRIGGER set_user_id_on_trip_insert
+  BEFORE INSERT ON public.trips
+  FOR EACH ROW
+  EXECUTE FUNCTION public.set_user_id_on_trip_insert();
 
