@@ -22,15 +22,16 @@ export default function Index() {
   useEffect(() => {
     const initializeTrip = async () => {
       try {
+        const today = format(new Date(), "yyyy-MM-dd");
+        
         const currentTrip = getCurrentTrip();
         
         if (currentTrip) {
           setLocation(currentTrip.location);
-          setDate(currentTrip.date);
-          const [tripData] = await getTrip(currentTrip.location, currentTrip.date);
+          setDate(today);  // Always set to today's date
+          const [tripData] = await getTrip(currentTrip.location, today);
           setExpenses(tripData?.expenses || []);
         } else {
-          const today = format(new Date(), "yyyy-MM-dd");
           setDate(today);
         }
       } catch (error) {
@@ -133,3 +134,4 @@ export default function Index() {
     </div>
   );
 }
+
