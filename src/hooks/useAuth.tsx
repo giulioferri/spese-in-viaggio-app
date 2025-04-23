@@ -145,6 +145,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     console.log("🔐 Attempting Google sign in");
     try {
+      // Log the current window location for debugging redirect issues
+      console.log("🔐 Current location:", window.location.origin, window.location.href);
+      
       const { error, data } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -162,6 +165,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsLoading(false);
       } else {
         console.log("🔐 Google auth initiated, redirecting...", data);
+        console.log("🔐 Redirect URL:", data.url);
       }
     } catch (error) {
       console.error("🔐 Unexpected error during Google sign in:", error);
