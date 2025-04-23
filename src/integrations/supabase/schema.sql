@@ -57,3 +57,19 @@ CREATE TRIGGER set_user_id_on_trip_insert
   FOR EACH ROW
   EXECUTE FUNCTION public.set_user_id_on_trip_insert();
 
+-- Create trigger to set user_id on expenses
+CREATE OR REPLACE FUNCTION public.set_user_id_on_expense_insert()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.user_id = auth.uid();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create trigger on expenses table
+DROP TRIGGER IF EXISTS set_user_id_on_expense_insert ON public.expenses;
+CREATE TRIGGER set_user_id_on_expense_insert
+  BEFORE INSERT ON public.expenses
+  FOR EACH ROW
+  EXECUTE FUNCTION public.set_user_id_on_expense_insert();
+
