@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { getTrips, deleteTrip } from "@/lib/tripStorage";
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
-import { Trash2 } from "lucide-react";
+import { Trash2, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Summary() {
@@ -22,7 +21,7 @@ export default function Summary() {
   const { toast } = useToast();
 
   const loadTrips = async () => {
-    const [loadedTrips] = await getTrips(); // Destrutturo per estrarre solo l'array di trasferte
+    const [loadedTrips] = await getTrips();
     setTrips(loadedTrips);
   };
 
@@ -56,6 +55,84 @@ export default function Summary() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const exportTripToZip = async (trip: any) => {
+    try {
+      const headers = ['Luogo', 'Data', 'Importo', 'Descrizione'];
+      let csvContent = headers.join(';') + '\n';
+      
+      trip.expenses.forEach((exp: any) => {
+        const euroAmount = Number(exp.amount)
+          .toFixed(2)
+          .replace('.', ',');
+        const row = [
+          trip.location,
+          new Date(trip.date).toLocaleDateString('it-IT'),
+          euroAmount,
+          (typeof exp.comment === 'string' ? exp.comment.replace(/[\n\r;]/g, ' ') : '')
+        ];
+        csvContent += row.join(';') + '\n';
+      });
+
+      const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+
+      const photoPromises = trip.expenses
+        .filter((exp: any) => exp.photoUrl)
+        .map(async (exp: any) => {
+          try {
+            const response = await fetch(exp.photoUrl);
+            const blob = await response.blob();
+            return {
+              name: `photo_${exp.id}${getFileExtension(exp.photoUrl)}`,
+              blob
+            };
+          } catch (error) {
+            console.error('Errore nel download della foto:', error);
+            return null;
+          }
+        });
+
+      const photos = (await Promise.all(photoPromises)).filter(photo => photo !== null);
+
+      const JSZip = await import('jszip');
+      const zip = new JSZip.default();
+
+      zip.file('riepilogo.csv', csvBlob);
+
+      photos.forEach(photo => {
+        if (photo) {
+          zip.file(`photos/${photo.name}`, photo.blob);
+        }
+      });
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const zipUrl = URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = zipUrl;
+      link.download = `trasferta_${trip.location}_${trip.date}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(zipUrl);
+
+      toast({
+        title: "Esportazione completata",
+        description: "Il file ZIP è stato scaricato con successo.",
+      });
+    } catch (error) {
+      console.error('Errore durante l\'esportazione:', error);
+      toast({
+        title: "Errore durante l'esportazione",
+        description: "Si è verificato un errore durante l'esportazione della trasferta.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getFileExtension = (url: string) => {
+    const match = url.match(/\.([^.]+)(?:\?.*)?$/);
+    return match ? `.${match[1].toLowerCase()}` : '.jpg';
   };
 
   const handleDelete = (location: string, date: string) => {
@@ -117,6 +194,14 @@ export default function Summary() {
                         .toFixed(2)}
                     </TableCell>
                     <TableCell className="text-right">
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        onClick={() => exportTripToZip(trip)}
+                      >
+                        <Download size={18} />
+                        <span className="sr-only">Esporta trasferta</span>
+                      </Button>
                       <AlertDialog open={showDialog && selectedTrip && selectedTrip.location === trip.location && selectedTrip.date === trip.date} onOpenChange={setShowDialog}>
                         <AlertDialogTrigger asChild>
                           <Button variant="destructive" size="icon" onClick={() => handleDelete(trip.location, trip.date)}>
