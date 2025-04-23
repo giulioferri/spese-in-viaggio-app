@@ -91,7 +91,13 @@ export default function TripSelector({
   const handleNewTrip = () => {
     if (!date) return;
     
-    const newDate = date.toISOString().split("T")[0];
+    // Fix: Format date in YYYY-MM-DD format without timezone conversion
+    // This ensures we get the date exactly as selected in the calendar
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const newDate = `${year}-${month}-${day}`;
+    
     onTripSelected(currentLocation, newDate);
     
     // Update the current trip in storage
