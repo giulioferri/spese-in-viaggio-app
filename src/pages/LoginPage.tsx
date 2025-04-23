@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, LogIn } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -16,60 +15,41 @@ export default function LoginPage() {
   const { signIn, signUp, signInWithGoogle, isLoading, user } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
   const navigate = useNavigate();
-  const { toast } = useToast();
-  
-  console.log("🔐 LoginPage: Rendering", { isUserLoggedIn: !!user, isLoading });
   
   useEffect(() => {
-    // If user is authenticated and not loading, redirect to home
-    if (user && !isLoading) {
-      console.log("🔐 LoginPage: User authenticated, redirecting to home");
-      navigate("/", { replace: true });
+    console.log("🔑 LoginPage: Checking if user is already logged in", user?.email);
+
+    // Controlla se ci sono parametri nell'URL che indicano un errore di reindirizzamento
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get('error');
+    const errorDescription = urlParams.get('error_description');
+    
+    if (error) {
+      console.error(`🔑 LoginPage: URL contains error: ${error}`, errorDescription);
     }
-  }, [user, isLoading, navigate]);
+    
+    if (user) {
+      console.log("🔑 LoginPage: User already logged in, redirecting to home");
+      navigate("/");
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(`🔐 LoginPage: Form submitted with ${activeTab}`, { email });
-    try {
-      if (activeTab === "login") {
-        await signIn(email, password);
-      } else {
-        await signUp(email, password);
-      }
-    } catch (error) {
-      console.error("🔐 LoginPage: Authentication error", error);
-      toast({
-        title: activeTab === "login" ? "Errore di accesso" : "Errore di registrazione",
-        description: "Si è verificato un errore durante l'autenticazione",
-        variant: "destructive",
-      });
+    console.log(`🔑 LoginPage: Form submitted with ${activeTab}`, { email });
+    if (activeTab === "login") {
+      await signIn(email, password);
+    } else {
+      await signUp(email, password);
     }
   };
 
   const handleGoogleLogin = async () => {
-    console.log("🔐 LoginPage: Google login initiated");
-    try {
-      await signInWithGoogle();
-    } catch (error) {
-      console.error("🔐 LoginPage: Google login error", error);
-      toast({
-        title: "Errore di autenticazione Google",
-        description: "Si è verificato un errore durante l'accesso con Google",
-        variant: "destructive",
-      });
-    }
+    console.log("🔑 LoginPage: Google login initiated");
+    console.log("🔑 LoginPage: Application URL:", window.location.origin);
+    console.log("🔑 LoginPage: Current URL:", window.location.href);
+    await signInWithGoogle();
   };
-
-  // Show loading state while checking if user is already logged in
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-secondary/20">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="mt-2">Verificando lo stato di autenticazione...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-secondary/20 px-4">
