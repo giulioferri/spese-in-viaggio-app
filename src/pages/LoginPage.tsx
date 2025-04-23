@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +22,7 @@ export default function LoginPage() {
     // Check if user is already logged in and redirect if needed
     const checkAuth = async () => {
       try {
-        console.log("🔑 LoginPage: Checking if user is already logged in", user?.email);
+        console.log("🔑 LoginPage: Auth check", { user: !!user, isLoading, email: user?.email });
         
         // Check for errors in URL parameters from OAuth redirects
         const urlParams = new URLSearchParams(window.location.search);
@@ -44,18 +43,19 @@ export default function LoginPage() {
           console.log("🔑 LoginPage: User already logged in, redirecting to home");
           navigate("/", { replace: true });
         }
-      } catch (err) {
-        console.error("🔑 LoginPage: Error checking authentication", err);
       } finally {
         setCheckingAuth(false);
       }
     };
     
-    // Only run the check if we're still in checking state
-    if (checkingAuth) {
+    // Don't check auth if we're already loading auth state
+    if (user !== null || !isLoading) {
       checkAuth();
+    } else if (!checkingAuth) {
+      // Reset checking state when auth is loading again
+      setCheckingAuth(true);
     }
-  }, [user, navigate, toast, checkingAuth]);
+  }, [user, isLoading, navigate, toast, checkingAuth]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,8 +79,6 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     console.log("🔑 LoginPage: Google login initiated");
-    console.log("🔑 LoginPage: Application URL:", window.location.origin);
-    console.log("🔑 LoginPage: Current URL:", window.location.href);
     try {
       await signInWithGoogle();
     } catch (error) {
@@ -93,11 +91,12 @@ export default function LoginPage() {
     }
   };
 
-  // Show loading state while checking authentication or during auth operations
-  if (checkingAuth || isLoading) {
+  // Show clear loading state
+  if (isLoading || checkingAuth) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-secondary/20">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-secondary/20">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="mt-2">Verificando lo stato di autenticazione...</p>
       </div>
     );
   }

@@ -18,64 +18,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let subscription: { unsubscribe: () => void } | null = null;
     
-    try {
-      console.log("🔑 AuthProvider: Setting up auth state listener");
-      
-      // Set up auth state listener FIRST
-      const { data } = supabase.auth.onAuthStateChange(
-        (event, newSession) => {
+    const setupAuth = async () => {
+      try {
+        console.log("🔑 AuthProvider: Setting up auth state listener");
+        
+        // Set up auth state listener FIRST
+        const { data } = supabase.auth.onAuthStateChange((event, newSession) => {
           console.log(`🔑 AuthProvider: Auth state changed: ${event}`, newSession?.user?.email);
           
-          // Always update state synchronously to prevent infinite loops
+          // Update state synchronously
           setSession(newSession);
           setUser(newSession?.user ?? null);
-            
-          if (event === 'SIGNED_IN') {
-            console.log("🔑 AuthProvider: User signed in", newSession?.user?.email);
+          
+          // Update loading state for specific events
+          if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
             setIsLoading(false);
-          } else if (event === 'SIGNED_OUT') {
-            console.log("🔑 AuthProvider: User signed out");
-            setIsLoading(false);
-          } else if (event === 'USER_UPDATED') {
-            console.log("🔑 AuthProvider: User updated");
-            setIsLoading(false);
-          } else if (event === 'TOKEN_REFRESHED') {
-            console.log("🔑 AuthProvider: Token refreshed");
           }
-        }
-      );
-      
-      subscription = data.subscription;
-      
-      // THEN check for existing session
-      supabase.auth.getSession()
-        .then(({ data: { session: currentSession } }) => {
-          console.log("🔑 AuthProvider: Checking for existing session", currentSession?.user?.email);
-          setSession(currentSession);
-          setUser(currentSession?.user ?? null);
-        })
-        .catch(error => {
-          console.error("🔑 AuthProvider: Error getting session", error);
-          toast({
-            title: "Errore di autenticazione",
-            description: "Si è verificato un problema nel recupero della sessione",
-            variant: "destructive",
-          });
-        })
-        .finally(() => {
-          setIsLoading(false);
-          setInitialized(true);
         });
-    } catch (error) {
-      console.error("🔑 AuthProvider: Unexpected error in auth setup", error);
-      toast({
-        title: "Errore di autenticazione",
-        description: "Si è verificato un errore durante l'inizializzazione dell'autenticazione",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      setInitialized(true);
-    }
+        
+        subscription = data.subscription;
+        
+        // THEN check for existing session
+        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          throw error;
+        }
+        
+        console.log("🔑 AuthProvider: Checking for existing session", currentSession?.user?.email);
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        
+        // Always set loading to false after session check
+        setIsLoading(false);
+        setInitialized(true);
+      } catch (error) {
+        console.error("🔑 AuthProvider: Error in auth setup", error);
+        toast({
+          title: "Errore di autenticazione",
+          description: "Si è verificato un problema nell'inizializzazione dell'autenticazione",
+          variant: "destructive",
+        });
+        // Ensure we don't stay in loading state on error
+        setIsLoading(false);
+        setInitialized(true);
+      }
+    };
+    
+    setupAuth();
     
     return () => {
       console.log("🔑 AuthProvider: Cleaning up auth subscription");
@@ -91,9 +81,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading,
   });
 
-  // Only render children when auth is initialized to prevent flashing
+  // Only render children when auth is initialized
   if (!initialized) {
-    return null;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="mt-2">Inizializzazione in corso...</p>
+      </div>
+    );
   }
 
   return (

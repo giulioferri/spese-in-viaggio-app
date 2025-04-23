@@ -5,10 +5,11 @@ import { Loader2 } from "lucide-react";
 
 export default function ProtectedRoute() {
   const { user, isLoading } = useAuth();
-
+  
+  console.log("🛡️ ProtectedRoute: Status check", { isAuthenticated: !!user, isLoading });
+  
   // Provide a fallback UI while loading
   if (isLoading) {
-    console.log("🛡️ ProtectedRoute: Loading auth state");
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
