@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
@@ -8,11 +9,19 @@ export type UserProfile = {
   palette: "default" | "green" | "red";
 };
 
-// Create Supabase client
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+// Create Supabase client with proper error handling for environment variables
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+// Check if environment variables are available
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error("Supabase environment variables are missing. Please make sure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set.");
+}
+
+// Initialize Supabase with fallback for development
+const supabase = supabaseUrl && supabaseAnonKey
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null;
 
 const PROFILE_KEY = "spese-trasferta-profile";
 
@@ -51,6 +60,14 @@ export function useProfile() {
     async function loadProfile() {
       setIsLoading(true);
       try {
+        // If Supabase is not available, use localStorage only
+        if (!supabase) {
+          console.warn("Supabase connection not available. Using localStorage only.");
+          setProfileState(getStoredProfile());
+          setIsLoading(false);
+          return;
+        }
+
         // Try to fetch profile from Supabase
         const { data, error } = await supabase
           .from('profiles')
@@ -117,6 +134,12 @@ export function useProfile() {
     localStorage.setItem(PROFILE_KEY, JSON.stringify(updatedProfile));
     
     try {
+      // Skip Supabase operations if not available
+      if (!supabase) {
+        console.warn("Supabase connection not available. Profile saved to localStorage only.");
+        return;
+      }
+      
       // Upload photo to Supabase storage if it's a data URL
       let photoUrl = updatedProfile.photo;
       if (photoUrl && photoUrl.startsWith('data:image')) {
