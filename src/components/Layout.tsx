@@ -1,17 +1,19 @@
 
 import { Outlet } from "react-router-dom";
 import { Link } from "react-router-dom";
-import { Home, PieChart, User, Loader2 } from "lucide-react";
+import { Home, PieChart, User, Loader2, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import ProfileModal from "./ProfileModal";
 import { useProfile } from "@/hooks/useProfile";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Layout() {
   const [openProfile, setOpenProfile] = useState(false);
   const { profile, isLoading } = useProfile();
+  const { signOut } = useAuth();
   const isMobile = useIsMobile();
 
   return (
@@ -40,6 +42,14 @@ export default function Layout() {
               ) : (
                 <User size={22} />
               )}
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => signOut()}
+              aria-label="Logout"
+            >
+              <LogOut size={20} />
             </Button>
           </div>
         </div>
