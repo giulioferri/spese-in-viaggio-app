@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuthActions } from "./useAuthActions";
 import { AuthContextType } from "./useAuth.types";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react"; 
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -16,44 +16,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Impostazione iniziale per verificare la sessione esistente
-    const checkSession = async () => {
-      try {
-        console.log("🔑 AuthProvider: Checking for existing session");
-        const { data, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error("🔑 AuthProvider: Error getting session", error);
-          setIsLoading(false);
-          return;
-        }
-        
-        setSession(data.session);
-        setUser(data.session?.user || null);
-        console.log("🔑 AuthProvider: Session check complete", !!data.session);
-      } catch (e) {
-        console.error("🔑 AuthProvider: Unexpected error", e);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    console.log("🔒 AuthProvider: Initializing");
     
-    // Imposta il listener per i cambiamenti di autenticazione
+    // Set up auth state listener FIRST
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
-        console.log(`🔑 AuthProvider: Auth state changed: ${event}`);
+        console.log(`🔒 AuthProvider: Auth state changed: ${event}`);
         setSession(currentSession);
         setUser(currentSession?.user || null);
       }
     );
     
+    // THEN check for existing session
+    const checkSession = async () => {
+      try {
+        console.log("🔒 AuthProvider: Checking for existing session");
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("🔒 AuthProvider: Error getting session", error);
+        } else {
+          console.log("🔒 AuthProvider: Session check complete", !!data.session);
+          setSession(data.session);
+          setUser(data.session?.user || null);
+        }
+      } catch (e) {
+        console.error("🔒 AuthProvider: Unexpected error", e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
     checkSession();
     
-    // Pulizia del listener quando il componente viene smontato
+    // Cleanup listener when component unmounts
     return () => {
+      console.log("🔒 AuthProvider: Cleaning up auth subscription");
       authListener.subscription.unsubscribe();
     };
-  }, [toast]);
+  }, []);
 
   const { signIn, signUp, signOut, signInWithGoogle } = useAuthActions({
     setUser,
@@ -61,28 +62,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading,
   });
 
-  // Mostra il loader solo durante il caricamento iniziale
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="mt-2">Caricamento...</p>
-      </div>
-    );
-  }
+  const value = {
+    user,
+    session,
+    isLoading,
+    signIn,
+    signUp,
+    signOut,
+    signInWithGoogle,
+  };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        session,
-        isLoading,
-        signIn,
-        signUp,
-        signOut,
-        signInWithGoogle,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

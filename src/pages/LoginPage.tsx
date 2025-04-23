@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,59 +17,28 @@ export default function LoginPage() {
   const [activeTab, setActiveTab] = useState("login");
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [checkingAuth, setCheckingAuth] = useState(true);
+  
+  console.log("🔐 LoginPage: Rendering", { isUserLoggedIn: !!user, isLoading });
   
   useEffect(() => {
-    // Check if user is already logged in and redirect if needed
-    const checkAuth = async () => {
-      try {
-        console.log("🔑 LoginPage: Auth check", { user: !!user, isLoading, email: user?.email });
-        
-        // Check for errors in URL parameters from OAuth redirects
-        const urlParams = new URLSearchParams(window.location.search);
-        const error = urlParams.get('error');
-        const errorDescription = urlParams.get('error_description');
-        
-        if (error) {
-          console.error(`🔑 LoginPage: URL contains error: ${error}`, errorDescription);
-          toast({
-            title: "Errore di autenticazione",
-            description: errorDescription || "Si è verificato un errore durante l'autenticazione",
-            variant: "destructive",
-          });
-        }
-        
-        // If user is authenticated, redirect to home page
-        if (user) {
-          console.log("🔑 LoginPage: User already logged in, redirecting to home");
-          navigate("/", { replace: true });
-        }
-      } finally {
-        setCheckingAuth(false);
-      }
-    };
-    
-    // Don't check auth if we're already loading auth state
-    if (user !== null || !isLoading) {
-      checkAuth();
-    } else if (!checkingAuth) {
-      // Reset checking state when auth is loading again
-      setCheckingAuth(true);
+    // If user is authenticated and not loading, redirect to home
+    if (user && !isLoading) {
+      console.log("🔐 LoginPage: User authenticated, redirecting to home");
+      navigate("/", { replace: true });
     }
-  }, [user, isLoading, navigate, toast, checkingAuth]);
+  }, [user, isLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(`🔑 LoginPage: Form submitted with ${activeTab}`, { email });
+    console.log(`🔐 LoginPage: Form submitted with ${activeTab}`, { email });
     try {
       if (activeTab === "login") {
         await signIn(email, password);
-        // Don't navigate here - wait for auth state change to happen through listener
       } else {
         await signUp(email, password);
       }
     } catch (error) {
-      console.error("🔑 LoginPage: Authentication error", error);
+      console.error("🔐 LoginPage: Authentication error", error);
       toast({
         title: activeTab === "login" ? "Errore di accesso" : "Errore di registrazione",
         description: "Si è verificato un errore durante l'autenticazione",
@@ -78,11 +48,11 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = async () => {
-    console.log("🔑 LoginPage: Google login initiated");
+    console.log("🔐 LoginPage: Google login initiated");
     try {
       await signInWithGoogle();
     } catch (error) {
-      console.error("🔑 LoginPage: Google login error", error);
+      console.error("🔐 LoginPage: Google login error", error);
       toast({
         title: "Errore di autenticazione Google",
         description: "Si è verificato un errore durante l'accesso con Google",
@@ -91,8 +61,8 @@ export default function LoginPage() {
     }
   };
 
-  // Show clear loading state
-  if (isLoading || checkingAuth) {
+  // Show loading state while checking if user is already logged in
+  if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-secondary/20">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
