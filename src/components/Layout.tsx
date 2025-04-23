@@ -21,7 +21,7 @@ export default function Layout() {
     navigate('/login');
   };
 
-  // Map palette values to background colors
+  // Mappa i valori della palette ai colori di sfondo
   const paletteBackgrounds = {
     default: "bg-[#009fef]",
     green: "bg-[#23c69e]",
@@ -32,7 +32,7 @@ export default function Layout() {
     <div className="flex min-h-screen flex-col">
       <header className={cn(
         "sticky top-0 z-10 border-b",
-        paletteBackgrounds[profile.palette],
+        paletteBackgrounds[profile.palette] || "bg-[#009fef]", // Fallback al colore default
         "text-white"
       )}>
         <div className="container flex h-14 items-center justify-between">
@@ -100,4 +100,3 @@ export default function Layout() {
     </div>
   );
 }
-
