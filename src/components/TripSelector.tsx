@@ -14,7 +14,6 @@ import { format } from "date-fns";
 import { Calendar as CalendarIcon, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getTrips, setCurrentTrip } from "@/lib/tripStorage";
-import QueryDebug from "@/components/QueryDebug";
 
 interface Trip {
   location: string;
@@ -36,20 +35,13 @@ export default function TripSelector({
   const [date, setDate] = useState<Date | undefined>(new Date(currentDate));
   const [isNewTrip, setIsNewTrip] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState<string>("");
-  const [queryDebugInfo, setQueryDebugInfo] = useState<any>(null);
 
   // Load trips on mount
   useEffect(() => {
     const loadTrips = async () => {
       try {
-        // Destructure the return value to get both trips array and debug info
-        const [loadedTrips, debugInfo] = await getTrips();
-        
-        // Aggiungiamo un log per vedere cosa contiene debugInfo
-        console.log("Debug info ricevuto in TripSelector:", debugInfo);
-        
+        const [loadedTrips] = await getTrips();
         setTrips(loadedTrips);
-        setQueryDebugInfo(debugInfo);
         
         // Create a unique ID for the current trip
         const currentTripId = `${currentLocation}|${currentDate}`;
@@ -91,8 +83,7 @@ export default function TripSelector({
   const handleNewTrip = () => {
     if (!date) return;
     
-    // Fix: Format date in YYYY-MM-DD format without timezone conversion
-    // This ensures we get the date exactly as selected in the calendar
+    // Format date in YYYY-MM-DD format without timezone conversion
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -139,13 +130,6 @@ export default function TripSelector({
         </Select>
       </div>
 
-      {/* Mostra il debug della query - mostrato sempre per aiutare il debug */}
-      {queryDebugInfo && (
-        <div className="mt-2">
-          <QueryDebug queryInfo={queryDebugInfo} />
-        </div>
-      )}
-
       {isNewTrip && (
         <div className="space-y-4 p-4 border rounded-md">
           <h3 className="text-sm font-medium">Nuova trasferta</h3>
@@ -190,3 +174,4 @@ export default function TripSelector({
     </div>
   );
 }
+
