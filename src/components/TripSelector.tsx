@@ -40,7 +40,7 @@ export default function TripSelector({
   useEffect(() => {
     const loadTrips = async () => {
       // Destructure the return value to get only the trips array, not the debug info
-      const [loadedTrips, _debugInfo] = await getTrips();
+      const [loadedTrips] = await getTrips();
       setTrips(loadedTrips);
       
       // Create a unique ID for the current trip
