@@ -1,8 +1,9 @@
 
 import { useState, useEffect } from "react";
-import { DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2, User } from "lucide-react";
+import { DialogClose } from "@radix-ui/react-dialog";
 import ProfileAvatarSection from "./ProfileAvatarSection";
 import ProfilePaletteSelector from "./ProfilePaletteSelector";
 import { UserProfile } from "@/hooks/useProfile";
@@ -54,43 +55,43 @@ export default function ProfileModalContent({
   };
 
   return (
-    <DialogContent className="max-w-sm w-full">
-      <DialogHeader>
-        <DialogTitle>
-          <User className="inline mr-2" /> Profilo Utente
-        </DialogTitle>
-      </DialogHeader>
-      <div className="flex flex-col items-center gap-4">
-        <ProfileAvatarSection
-          photo={tempProfile.photo}
-          onChangePhoto={photo =>
-            setTempProfile(prev => ({ ...prev, photo }))
-          }
-        />
-        <ProfilePaletteSelector
-          palette={tempProfile.palette}
-          onSelect={palette =>
-            setTempProfile(prev => ({ ...prev, palette }))
-          }
-        />
-      </div>
-      <DialogFooter className="mt-4">
-        <DialogClose asChild>
-          <Button variant="ghost" disabled={isSaving}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm w-full">
+        <DialogHeader>
+          <DialogTitle>
+            <User className="inline mr-2" /> Profilo Utente
+          </DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col items-center gap-4">
+          <ProfileAvatarSection
+            photo={tempProfile.photo}
+            onChangePhoto={photo =>
+              setTempProfile(prev => ({ ...prev, photo }))
+            }
+          />
+          <ProfilePaletteSelector
+            palette={tempProfile.palette}
+            onSelect={palette =>
+              setTempProfile(prev => ({ ...prev, palette }))
+            }
+          />
+        </div>
+        <DialogFooter className="mt-4">
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isSaving}>
             Annulla
           </Button>
-        </DialogClose>
-        <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Salvataggio...
-            </>
-          ) : (
-            "Salva"
-          )}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Salvataggio...
+              </>
+            ) : (
+              "Salva"
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
