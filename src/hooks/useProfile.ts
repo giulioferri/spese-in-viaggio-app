@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
@@ -140,8 +141,13 @@ export function useProfile() {
           .from("profile_photos")
           .upload(fileName, blob, { cacheControl: "3600", upsert: true });
 
-        if (uploadError && uploadError.statusCode !== "409") {
-          throw new Error(`Errore durante il caricamento della foto: ${uploadError.message}`);
+        // Correggiamo qui la verifica dell'errore rimuovendo la verifica di statusCode
+        if (uploadError) {
+          // Verifica se l'errore è diverso dal conflitto (409)
+          // Il nome dell'errore o un messaggio specifico può essere controllato al posto del codice di stato
+          if (uploadError.message !== 'The resource already exists') {
+            throw new Error(`Errore durante il caricamento della foto: ${uploadError.message}`);
+          }
         }
 
         // Ottieni l'URL pubblico
