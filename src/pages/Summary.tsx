@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
   Table, 
@@ -10,30 +10,34 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { getTrips } from "@/lib/tripStorage";
+import { getTrips, deleteTrip } from "@/lib/tripStorage";
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
+import { Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Summary() {
   const [trips, setTrips] = useState<any[]>([]);
+  const [selectedTrip, setSelectedTrip] = useState<{location: string, date: string} | null>(null);
+  const [showDialog, setShowDialog] = useState(false);
+  const { toast } = useToast();
+
+  const loadTrips = async () => {
+    const loadedTrips = await getTrips();
+    setTrips(loadedTrips);
+  };
 
   useEffect(() => {
-    const loadTrips = async () => {
-      const loadedTrips = await getTrips();
-      setTrips(loadedTrips);
-    };
-    
     loadTrips();
   }, []);
 
   const exportToCSV = () => {
-    // Colonne: Luogo;Data;Importo;Descrizione
     const headers = ['Luogo', 'Data', 'Importo', 'Descrizione'];
     let csvContent = headers.join(';') + '\n';
-
     trips.forEach(trip => {
       trip.expenses.forEach((exp: any) => {
         const euroAmount = Number(exp.amount)
           .toFixed(2)
-          .replace('.', ','); // Virgola come separatore decimale
+          .replace('.', ',');
         const row = [
           trip.location,
           new Date(trip.date).toLocaleDateString('it-IT'),
@@ -43,7 +47,6 @@ export default function Summary() {
         csvContent += row.join(';') + '\n';
       });
     });
-
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -53,6 +56,24 @@ export default function Summary() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleDelete = (location: string, date: string) => {
+    setSelectedTrip({ location, date });
+    setShowDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (selectedTrip) {
+      await deleteTrip(selectedTrip.location, selectedTrip.date);
+      setShowDialog(false);
+      setSelectedTrip(null);
+      toast({
+        title: "Trasferta eliminata",
+        description: "La trasferta e i relativi allegati sono stati eliminati.",
+      });
+      await loadTrips();
+    }
   };
 
   return (
@@ -80,6 +101,7 @@ export default function Summary() {
                   <TableHead>Data</TableHead>
                   <TableHead>N° Spese</TableHead>
                   <TableHead className="text-right">Totale</TableHead>
+                  <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -93,6 +115,34 @@ export default function Summary() {
                       {trip.expenses
                         .reduce((sum: number, exp: any) => sum + Number(exp.amount), 0)
                         .toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <AlertDialog open={showDialog && selectedTrip && selectedTrip.location === trip.location && selectedTrip.date === trip.date} onOpenChange={setShowDialog}>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="icon" onClick={() => handleDelete(trip.location, trip.date)}>
+                            <Trash2 size={18} />
+                            <span className="sr-only">Elimina trasferta</span>
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              Eliminare questa trasferta?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tutte le spese e gli allegati di questa trasferta verranno eliminati definitivamente. Sei sicuro di voler continuare?
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Annulla</AlertDialogCancel>
+                            <AlertDialogAction asChild>
+                              <Button variant="destructive" onClick={confirmDelete}>
+                                Elimina definitivamente
+                              </Button>
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </TableCell>
                   </TableRow>
                 ))}

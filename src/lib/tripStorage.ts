@@ -1,4 +1,3 @@
-
 // Type definitions
 export interface Expense {
   id: string;
@@ -104,4 +103,37 @@ export const getCurrentTrip = (): { location: string; date: string } | null => {
   }
   
   return JSON.parse(currentTripData);
+};
+
+// Funzione di utilità per rimuovere tutte le foto di una trasferta
+export const removeTripPhotos = async (trip: Trip) => {
+  for (const expense of trip.expenses) {
+    if (expense.photoUrl && expense.photoUrl.startsWith("https://xkqzwdubkxutogqcnapm.supabase.co/storage/")) {
+      try {
+        // Estrai il percorso del file dallo URL
+        const url = new URL(expense.photoUrl);
+        // Esempio: /storage/v1/object/public/profile_photos/avatar-xxxx-1234567.png
+        const parts = url.pathname.split("/");
+        const bucket = parts[5]; // "profile_photos"
+        const path = parts.slice(6).join("/"); // "avatar-xxxx-1234567.png"
+        const { supabase } = await import("@/integrations/supabase/client");
+        await supabase.storage.from(bucket).remove([path]);
+      } catch (e) {
+        // fallo silenziosamente, può trattarsi di una foto locale/non su Supabase
+        console.warn("Errore nella rimozione della foto:", e);
+      }
+    }
+  }
+};
+
+// Rimuovi l'intera trasferta e le sue foto
+export const deleteTrip = async (location: string, date: string): Promise<void> => {
+  const trips = await getTrips();
+  const tripIndex = trips.findIndex((t) => t.location === location && t.date === date);
+  if (tripIndex >= 0) {
+    const trip = trips[tripIndex];
+    await removeTripPhotos(trip);
+    trips.splice(tripIndex, 1);
+    await saveTrips(trips);
+  }
 };
