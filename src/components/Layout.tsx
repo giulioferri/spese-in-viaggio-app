@@ -5,11 +5,15 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import ProfileModal from "./ProfileModal";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
 import { useState } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { User } from "lucide-react";
 
 export default function Layout() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const { profile } = useProfile();
   const [showProfileModal, setShowProfileModal] = useState(false);
   
   const handleSignOut = async () => {
@@ -17,9 +21,20 @@ export default function Layout() {
     navigate('/login');
   };
 
+  // Map palette values to background colors
+  const paletteBackgrounds = {
+    default: "bg-[#009fef]",
+    green: "bg-[#23c69e]",
+    red: "bg-[#ff325b]",
+  };
+
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-10 border-b bg-background">
+      <header className={cn(
+        "sticky top-0 z-10 border-b",
+        paletteBackgrounds[profile.palette],
+        "text-white"
+      )}>
         <div className="container flex h-14 items-center justify-between">
           <div className="flex items-center gap-2">
             <Link to="/" className="flex items-center gap-2">
@@ -31,7 +46,7 @@ export default function Layout() {
               to="/"
               className={cn(
                 buttonVariants({ variant: "ghost", size: "sm" }),
-                "text-muted-foreground"
+                "text-white hover:text-white/90"
               )}
             >
               Home
@@ -40,24 +55,36 @@ export default function Layout() {
               to="/summary"
               className={cn(
                 buttonVariants({ variant: "ghost", size: "sm" }),
-                "text-muted-foreground"
+                "text-white hover:text-white/90"
               )}
             >
               Riepilogo
             </Link>
             {user && (
-              <span className="text-xs text-muted-foreground">
+              <span className="text-white text-xs">
                 {user.email?.substring(0, 15)}...
               </span>
             )}
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <button 
               onClick={() => setShowProfileModal(true)}
+              className="focus:outline-none"
             >
-              Profilo
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleSignOut}>
+              <Avatar className="h-8 w-8 cursor-pointer hover:opacity-90">
+                {profile.photo ? (
+                  <AvatarImage src={profile.photo} alt="Foto profilo" />
+                ) : (
+                  <AvatarFallback>
+                    <User size={16} />
+                  </AvatarFallback>
+                )}
+              </Avatar>
+            </button>
+            <Button 
+              variant="secondary" 
+              size="sm" 
+              onClick={handleSignOut}
+              className="text-primary hover:text-primary"
+            >
               Esci
             </Button>
           </nav>
@@ -73,3 +100,4 @@ export default function Layout() {
     </div>
   );
 }
+
