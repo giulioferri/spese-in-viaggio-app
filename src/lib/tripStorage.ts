@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { debugQuery } from "./tripStorageDebug";
 
@@ -89,14 +90,15 @@ export const getTrip = async (location: string, date: string): Promise<[Trip | u
     
     // Debug informazioni
     const debugInfo = await debugQuery(
-      `SELECT * FROM trips WHERE location='${location}' AND date='${date}'`, 
+      `SELECT * FROM trips WHERE location='${location}' AND date='${date}' AND user_id='${session.user.id}'`, 
       async () => {
-        // RLS garantirà che vengano restituiti solo i trip dell'utente autenticato
+        // Ora aggiungiamo esplicitamente il filtro per user_id per garantire che l'utente veda solo i propri dati
         return await supabase
           .from('trips')
           .select('id, location, date, user_id, expenses:expenses(id, amount, comment, photo_url, photo_path, timestamp)')
           .eq('location', location)
           .eq('date', date)
+          .eq('user_id', session.user.id) // Filtro esplicito per user_id
           .maybeSingle();
       }
     );
