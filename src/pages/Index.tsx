@@ -22,20 +22,30 @@ export default function Index() {
   useEffect(() => {
     const initializeTrip = async () => {
       try {
+        // Always use today's date as the default
         const today = format(new Date(), "yyyy-MM-dd");
+        setDate(today);
         
         const currentTrip = getCurrentTrip();
         
-        if (currentTrip) {
+        if (currentTrip && currentTrip.location) {
+          // Use the saved location but always today's date
           setLocation(currentTrip.location);
-          setDate(today);  // Always set to today's date
+          
+          // Try to load expenses for the current location and today
           const [tripData] = await getTrip(currentTrip.location, today);
-          setExpenses(tripData?.expenses || []);
-        } else {
-          setDate(today);
+          
+          if (tripData) {
+            setExpenses(tripData.expenses || []);
+            // Update current trip with today's date
+            setCurrentTrip(currentTrip.location, today);
+          } else {
+            setExpenses([]);
+          }
         }
       } catch (error) {
         console.error("Error initializing trip:", error);
+        setExpenses([]);
       } finally {
         setLoading(false);
       }
@@ -134,4 +144,3 @@ export default function Index() {
     </div>
   );
 }
-
