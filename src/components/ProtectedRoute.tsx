@@ -12,12 +12,6 @@ export default function ProtectedRoute() {
       console.log("🛡️ ProtectedRoute: Loading auth state");
     } else if (user) {
       console.log("🛡️ ProtectedRoute: User authenticated", user.email);
-      console.log("🛡️ User details:", {
-        id: user.id,
-        email: user.email,
-        providerIds: user.app_metadata?.providers,
-        authMethod: user.app_metadata?.provider
-      });
     } else {
       console.log("🛡️ ProtectedRoute: No authenticated user, redirecting to login");
     }

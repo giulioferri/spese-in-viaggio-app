@@ -17,17 +17,11 @@ export default function LoginPage() {
   const navigate = useNavigate();
   
   useEffect(() => {
-    console.log("🔑 LoginPage: Checking if user is already logged in", user?.email);
+    console.log("🔑 LoginPage: Rendering", { 
+      isUserLoggedIn: !!user,
+      isLoading
+    });
 
-    // Controlla se ci sono parametri nell'URL che indicano un errore di reindirizzamento
-    const urlParams = new URLSearchParams(window.location.search);
-    const error = urlParams.get('error');
-    const errorDescription = urlParams.get('error_description');
-    
-    if (error) {
-      console.error(`🔑 LoginPage: URL contains error: ${error}`, errorDescription);
-    }
-    
     if (user) {
       console.log("🔑 LoginPage: User already logged in, redirecting to home");
       navigate("/");
@@ -46,8 +40,6 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     console.log("🔑 LoginPage: Google login initiated");
-    console.log("🔑 LoginPage: Application URL:", window.location.origin);
-    console.log("🔑 LoginPage: Current URL:", window.location.href);
     await signInWithGoogle();
   };
 
