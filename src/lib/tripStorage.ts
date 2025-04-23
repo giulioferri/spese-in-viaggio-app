@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Expense {
@@ -30,6 +29,9 @@ export const getTrips = async (): Promise<Trip[]> => {
     return [];
   }
 
+  // Log per debug: verificare quali dati vengono restituiti
+  console.log("Dati trasferte recuperati:", tripsData ? tripsData.length : 0, "trasferte");
+  
   return (tripsData || []).map((trip: any) => ({
     ...trip,
     expenses: (trip.expenses || []).map((exp: any) => ({
@@ -53,7 +55,15 @@ export const getTrip = async (location: string, date: string): Promise<Trip | un
     .eq('date', date)
     .maybeSingle();
 
-  if (error || !trip) return undefined;
+  if (error) {
+    console.error("Errore nel recupero trasferta:", error);
+    return undefined;
+  }
+  
+  if (!trip) return undefined;
+
+  // Log per debug: verificare i dettagli della trasferta recuperata
+  console.log("Dettagli trasferta recuperata:", trip.id, trip.location, trip.date);
 
   return {
     ...trip,
@@ -70,6 +80,13 @@ export const getTrip = async (location: string, date: string): Promise<Trip | un
 
 // Save a trip (insert or update if exists)
 export const saveTrip = async (trip: Omit<Trip, "expenses">): Promise<string | null> => {
+  // Controllo della sessione per verificare l'autenticazione
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) {
+    console.error("Errore: utente non autenticato");
+    return null;
+  }
+  
   // Non specificare user_id manualmente. Il trigger set_user_id_on_trip_insert lo imposterà automaticamente
   const { data, error } = await supabase
     .from('trips')
@@ -86,6 +103,10 @@ export const saveTrip = async (trip: Omit<Trip, "expenses">): Promise<string | n
     console.error("Errore salvataggio trasferta:", error);
     return null;
   }
+
+  // Log per debug
+  console.log("Trasferta salvata con ID:", data?.id);
+  
   return data?.id || null;
 };
 
@@ -95,6 +116,13 @@ export const addExpense = async (
   date: string,
   expense: Expense
 ): Promise<void> => {
+  // Controllo della sessione per verificare l'autenticazione
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) {
+    console.error("Errore: utente non autenticato");
+    throw new Error("Utente non autenticato");
+  }
+
   // Step 1: Ensure trip exists/get id
   let trip = await getTrip(location, date);
   let tripId = trip?.id;
@@ -113,7 +141,7 @@ export const addExpense = async (
   }
   
   // Non specificare user_id manualmente. Il trigger set_user_id_on_expense_insert lo imposterà automaticamente
-  await supabase
+  const { error } = await supabase
     .from("expenses")
     .insert({
       id: expense.id,
@@ -125,6 +153,14 @@ export const addExpense = async (
       trip_id: tripId
       // Non specificare user_id qui, il trigger lo imposterà automaticamente
     });
+
+  if (error) {
+    console.error("Errore salvataggio spesa:", error);
+    throw new Error(`Errore nel salvare la spesa: ${error.message}`);
+  }
+
+  // Log per debug
+  console.log("Spesa aggiunta con ID:", expense.id, "alla trasferta:", tripId);
 };
 
 // Remove an expense from a trip (and delete its photo in storage)
@@ -133,6 +169,13 @@ export const removeExpense = async (
   date: string,
   expenseId: string
 ): Promise<void> => {
+  // Controllo della sessione per verificare l'autenticazione
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) {
+    console.error("Errore: utente non autenticato");
+    return;
+  }
+
   const trip = await getTrip(location, date);
   if (!trip) return;
   const exp = trip.expenses.find(e => e.id === expenseId);
@@ -142,6 +185,9 @@ export const removeExpense = async (
   }
   // Remove from db
   await supabase.from("expenses").delete().eq("id", expenseId);
+  
+  // Log per debug
+  console.log("Spesa rimossa:", expenseId);
 };
 
 // Get/set current trip - keep in localStorage for UX
@@ -172,10 +218,23 @@ export const removeTripPhotos = async (trip: Trip) => {
 
 // Delete a whole trip and all related expenses/photos
 export const deleteTrip = async (location: string, date: string): Promise<void> => {
+  // Controllo della sessione per verificare l'autenticazione
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) {
+    console.error("Errore: utente non autenticato");
+    return;
+  }
+
   const trip = await getTrip(location, date);
   if (!trip) return;
   // Remove photos of all expenses
   await removeTripPhotos(trip);
   // Remove trip (will cascade and delete all expenses)
-  await supabase.from('trips').delete().match({ location, date });
+  const { error } = await supabase.from('trips').delete().match({ location, date });
+  
+  if (error) {
+    console.error("Errore eliminazione trasferta:", error);
+  } else {
+    console.log("Trasferta eliminata:", location, date);
+  }
 };
