@@ -32,10 +32,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             
           if (event === 'SIGNED_IN') {
             console.log("🔑 AuthProvider: User signed in", newSession?.user?.email);
+            setIsLoading(false);
           } else if (event === 'SIGNED_OUT') {
             console.log("🔑 AuthProvider: User signed out");
+            setIsLoading(false);
           } else if (event === 'USER_UPDATED') {
             console.log("🔑 AuthProvider: User updated");
+            setIsLoading(false);
           } else if (event === 'TOKEN_REFRESHED') {
             console.log("🔑 AuthProvider: Token refreshed");
           }

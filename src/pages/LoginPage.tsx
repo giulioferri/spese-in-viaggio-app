@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +20,7 @@ export default function LoginPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   
   useEffect(() => {
-    // Separate state for checking auth to prevent redirect loops
+    // Check if user is already logged in and redirect if needed
     const checkAuth = async () => {
       try {
         console.log("🔑 LoginPage: Checking if user is already logged in", user?.email);
@@ -92,7 +93,7 @@ export default function LoginPage() {
     }
   };
 
-  // Show loading state while checking authentication
+  // Show loading state while checking authentication or during auth operations
   if (checkingAuth || isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-secondary/20">
