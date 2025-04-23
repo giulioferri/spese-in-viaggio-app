@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Expense {
@@ -18,6 +19,7 @@ export interface Trip {
 
 // Fetch all trips (with expenses)
 export const getTrips = async (): Promise<Trip[]> => {
+  // RLS garantirà che vengano restituiti solo i trip dell'utente autenticato
   const { data: tripsData, error: tripsError } = await supabase
     .from('trips')
     .select('id, location, date, expenses:expenses(id, amount, comment, photo_url, photo_path, timestamp)')
@@ -43,6 +45,7 @@ export const getTrips = async (): Promise<Trip[]> => {
 
 // Get a single trip and its expenses
 export const getTrip = async (location: string, date: string): Promise<Trip | undefined> => {
+  // RLS garantirà che vengano restituiti solo i trip dell'utente autenticato
   const { data: trip, error } = await supabase
     .from('trips')
     .select('id, location, date, expenses:expenses(id, amount, comment, photo_url, photo_path, timestamp)')
@@ -67,17 +70,18 @@ export const getTrip = async (location: string, date: string): Promise<Trip | un
 
 // Save a trip (insert or update if exists)
 export const saveTrip = async (trip: Omit<Trip, "expenses">): Promise<string | null> => {
-  // Ensure the user_id field is properly set to the current authenticated user
+  // Non specificare user_id manualmente. Il trigger set_user_id_on_trip_insert lo imposterà automaticamente
   const { data, error } = await supabase
     .from('trips')
     .upsert({
       id: trip.id,
       location: trip.location,
       date: trip.date, // ISO "yyyy-MM-dd"
-      // user_id will be set automatically by the trigger on the server
+      // Non specificare user_id qui, il trigger lo imposterà automaticamente
     }, { onConflict: "location,date" })
     .select()
     .maybeSingle();
+  
   if (error) {
     console.error("Errore salvataggio trasferta:", error);
     return null;
@@ -108,8 +112,7 @@ export const addExpense = async (
     throw new Error("Impossibile salvare la spesa: nessuna trasferta trovata");
   }
   
-  // Non è necessario specificare user_id poiché abbiamo implementato un trigger
-  // che imposta automaticamente user_id = auth.uid() per le nuove trips
+  // Non specificare user_id manualmente. Il trigger set_user_id_on_expense_insert lo imposterà automaticamente
   await supabase
     .from("expenses")
     .insert({
@@ -120,6 +123,7 @@ export const addExpense = async (
       photo_path: expense.photoPath ?? null,
       timestamp: new Date(expense.timestamp).toISOString(),
       trip_id: tripId
+      // Non specificare user_id qui, il trigger lo imposterà automaticamente
     });
 };
 
