@@ -26,7 +26,7 @@ export default function Layout() {
             <Button
               variant="outline"
               size="icon"
-              className="rounded-full"
+              className="rounded-full bg-white/20 hover:bg-white/30"
               aria-label="Profilo utente"
               onClick={() => setOpenProfile(true)}
             >
@@ -36,20 +36,21 @@ export default function Layout() {
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={profile.photo} />
                   <AvatarFallback>
-                    <User size={20} />
+                    <User size={20} className="text-primary" />
                   </AvatarFallback>
                 </Avatar>
               ) : (
-                <User size={22} />
+                <User size={22} className="text-foreground" />
               )}
             </Button>
             <Button
               variant="outline"
               size="icon"
               onClick={() => signOut()}
+              className="bg-white/20 hover:bg-white/30"
               aria-label="Logout"
             >
-              <LogOut size={20} />
+              <LogOut size={20} className="text-foreground" />
             </Button>
           </div>
         </div>
@@ -67,7 +68,7 @@ export default function Layout() {
           <Link to="/">
             <Button 
               variant="ghost" 
-              className="flex flex-col items-center gap-1 h-[52px]" // Increased height by 30%
+              className="flex flex-col items-center gap-1 h-[52px]"
             >
               <Home size={20} />
               <span className="text-xs">Home</span>
@@ -76,7 +77,7 @@ export default function Layout() {
           <Link to="/summary">
             <Button 
               variant="ghost" 
-              className="flex flex-col items-center gap-1 h-[52px]" // Increased height by 30%
+              className="flex flex-col items-center gap-1 h-[52px]"
             >
               <PieChart size={20} />
               <span className="text-xs">Riepiloghi</span>
@@ -87,3 +88,4 @@ export default function Layout() {
     </div>
   );
 }
+
