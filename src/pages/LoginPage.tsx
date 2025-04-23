@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, LogIn } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -15,6 +16,7 @@ export default function LoginPage() {
   const { signIn, signUp, signInWithGoogle, isLoading, user } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
   const navigate = useNavigate();
+  const { toast } = useToast();
   
   useEffect(() => {
     console.log("🔑 LoginPage: Checking if user is already logged in", user?.email);
@@ -26,21 +28,35 @@ export default function LoginPage() {
     
     if (error) {
       console.error(`🔑 LoginPage: URL contains error: ${error}`, errorDescription);
+      toast({
+        title: "Errore di autenticazione",
+        description: errorDescription || "Si è verificato un errore durante l'autenticazione",
+        variant: "destructive",
+      });
     }
     
     if (user) {
       console.log("🔑 LoginPage: User already logged in, redirecting to home");
       navigate("/");
     }
-  }, [user, navigate]);
+  }, [user, navigate, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log(`🔑 LoginPage: Form submitted with ${activeTab}`, { email });
-    if (activeTab === "login") {
-      await signIn(email, password);
-    } else {
-      await signUp(email, password);
+    try {
+      if (activeTab === "login") {
+        await signIn(email, password);
+      } else {
+        await signUp(email, password);
+      }
+    } catch (error) {
+      console.error("🔑 LoginPage: Authentication error", error);
+      toast({
+        title: activeTab === "login" ? "Errore di accesso" : "Errore di registrazione",
+        description: "Si è verificato un errore durante l'autenticazione",
+        variant: "destructive",
+      });
     }
   };
 
@@ -48,7 +64,16 @@ export default function LoginPage() {
     console.log("🔑 LoginPage: Google login initiated");
     console.log("🔑 LoginPage: Application URL:", window.location.origin);
     console.log("🔑 LoginPage: Current URL:", window.location.href);
-    await signInWithGoogle();
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      console.error("🔑 LoginPage: Google login error", error);
+      toast({
+        title: "Errore di autenticazione Google",
+        description: "Si è verificato un errore durante l'accesso con Google",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
