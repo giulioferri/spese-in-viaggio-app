@@ -10,7 +10,6 @@ import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
 import ThemeProvider from "./components/ThemeProvider";
 import LoginPage from "./pages/LoginPage";
-import DiagnosticPage from "./pages/DiagnosticPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./hooks/useAuth";
 
@@ -30,7 +29,6 @@ const App = () => (
                 <Route path="/" element={<Layout />}>
                   <Route index element={<Index />} />
                   <Route path="summary" element={<Summary />} />
-                  <Route path="diagnostic" element={<DiagnosticPage />} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFound />} />

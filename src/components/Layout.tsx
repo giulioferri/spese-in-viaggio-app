@@ -5,10 +5,12 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import ProfileModal from "./ProfileModal";
 import { useAuth } from "@/hooks/useAuth";
+import { useState } from "react";
 
 export default function Layout() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const [showProfileModal, setShowProfileModal] = useState(false);
   
   const handleSignOut = async () => {
     await signOut();
@@ -43,20 +45,18 @@ export default function Layout() {
             >
               Riepilogo
             </Link>
-            <Link
-              to="/diagnostic"
-              className={cn(
-                buttonVariants({ variant: "ghost", size: "sm" }),
-                "text-muted-foreground"
-              )}
-            >
-              Diagnosi
-            </Link>
             {user && (
               <span className="text-xs text-muted-foreground">
                 {user.email?.substring(0, 15)}...
               </span>
             )}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowProfileModal(true)}
+            >
+              Profilo
+            </Button>
             <Button variant="outline" size="sm" onClick={handleSignOut}>
               Esci
             </Button>
@@ -66,6 +66,10 @@ export default function Layout() {
       <main className="flex-1 container py-6">
         <Outlet />
       </main>
+      <ProfileModal
+        open={showProfileModal}
+        onOpenChange={setShowProfileModal}
+      />
     </div>
   );
 }
