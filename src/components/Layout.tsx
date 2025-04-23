@@ -1,4 +1,3 @@
-
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button";
@@ -32,7 +31,7 @@ export default function Layout() {
     <div className="flex min-h-screen flex-col">
       <header className={cn(
         "sticky top-0 z-10 border-b",
-        paletteBackgrounds[profile.palette] || "bg-[#009fef]", // Fallback al colore default
+        paletteBackgrounds[profile.palette] || "bg-[#009fef]",
         "text-white"
       )}>
         <div className="container flex h-14 items-center justify-between">
@@ -83,7 +82,7 @@ export default function Layout() {
               variant="secondary" 
               size="sm" 
               onClick={handleSignOut}
-              className="text-primary hover:text-primary hover:bg-white/20"
+              className="text-white hover:bg-white/20 hover:text-[#333333]"
             >
               Esci
             </Button>
