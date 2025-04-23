@@ -1,10 +1,10 @@
-
 import { useEffect, useState, createContext, useContext, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthActions } from "./useAuthActions";
 import { AuthContextType } from "./useAuth.types";
 import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
