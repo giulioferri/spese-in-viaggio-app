@@ -41,16 +41,18 @@ const validateAuth = async () => {
 export const getTrips = async (): Promise<[Trip[], QueryDebugInfo]> => {
   try {
     // Verifica autenticazione
-    await validateAuth();
+    const session = await validateAuth();
+    const userId = session.user.id;
     
-    // Debug informazioni
+    // Debug informazioni - aggiungiamo il filtro per user_id in modo esplicito nella descrizione
     const debugInfo = await debugQuery(
-      "SELECT * FROM trips + SELECT * FROM expenses PER TRIP", 
+      `SELECT * FROM trips WHERE user_id = '${userId}' + SELECT * FROM expenses PER TRIP`, 
       async () => {
         // RLS garantirà che vengano restituiti solo i trip dell'utente autenticato
         return await supabase
           .from('trips')
           .select('id, location, date, user_id, expenses:expenses(id, amount, comment, photo_url, photo_path, timestamp)')
+          .eq('user_id', userId)  // Aggiungiamo un filtro esplicito per user_id
           .order('date', { ascending: false });
       }
     );
