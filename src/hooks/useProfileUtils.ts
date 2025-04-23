@@ -28,11 +28,11 @@ export function getStoredProfile(): UserProfile {
 }
 
 // Determine whether to use logged in user ID or anonymous ID
-export function getOrCreateUserId(): string {
+export async function getOrCreateUserId(): Promise<string> {
   try {
     // First check if there's an authenticated user
-    const session = supabase.auth.getSession();
-    const authUserId = session?.data?.session?.user?.id;
+    const { data: { session } } = await supabase.auth.getSession();
+    const authUserId = session?.user?.id;
     
     if (authUserId) {
       console.log("Using authenticated user ID:", authUserId);

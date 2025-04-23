@@ -17,15 +17,31 @@ export type UserProfile = {
 
 export function useProfile() {
   const [profile, setProfileState] = useState<UserProfile>(() => getStoredProfile());
+  const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Ora l'ID utente è sempre un UUID
-  const userId = getOrCreateUserId();
   const { toast } = useToast();
+
+  // Fetch user ID on mount
+  useEffect(() => {
+    async function fetchUserId() {
+      try {
+        const id = await getOrCreateUserId();
+        setUserId(id);
+      } catch (err) {
+        console.error("🧩 Error getting user ID:", err);
+        setError(`Error getting user ID: ${String(err)}`);
+        setIsLoading(false);
+      }
+    }
+    
+    fetchUserId();
+  }, []);
 
   useEffect(() => {
     async function loadProfile() {
+      if (!userId) return;
+      
       setIsLoading(true);
       try {
         const localProfile = getStoredProfile();
@@ -81,12 +97,20 @@ export function useProfile() {
     
     if (userId) {
       loadProfile();
-    } else {
-      setIsLoading(false);
     }
   }, [userId]);
 
   const setProfile = async (updater: UserProfile | ((p: UserProfile) => UserProfile)) => {
+    if (!userId) {
+      console.error("🧩 Cannot update profile: No user ID available");
+      toast({
+        title: "Errore",
+        description: "Impossibile aggiornare il profilo: ID utente non disponibile",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
     try {
       const currProfile = profile;
       const newProfile = typeof updater === "function" ? updater(currProfile) : updater;
