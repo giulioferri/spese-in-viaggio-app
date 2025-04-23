@@ -6,12 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2 } from "lucide-react";
+import { Loader2, LogIn } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { signIn, signUp, isLoading } = useAuth();
+  const { signIn, signUp, signInWithGoogle, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -21,6 +21,11 @@ export default function LoginPage() {
     } else {
       await signUp(email, password);
     }
+  };
+
+  // Social login handler
+  const handleGoogleLogin = async () => {
+    await signInWithGoogle();
   };
 
   return (
@@ -63,6 +68,18 @@ export default function LoginPage() {
                     required
                   />
                 </div>
+                <div className="flex flex-col gap-2 pt-2">
+                  <Button 
+                    type="button"
+                    variant="outline" 
+                    className="w-full flex items-center gap-2"
+                    onClick={handleGoogleLogin}
+                    disabled={isLoading}
+                  >
+                    <LogIn className="w-4 h-4" />
+                    {isLoading ? "Attendere..." : "Accedi con Google"}
+                  </Button>
+                </div>
               </CardContent>
               <CardFooter>
                 <Button type="submit" className="w-full" disabled={isLoading}>
@@ -99,6 +116,18 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                   />
+                </div>
+                <div className="flex flex-col gap-2 pt-2">
+                  <Button 
+                    type="button"
+                    variant="outline" 
+                    className="w-full flex items-center gap-2"
+                    onClick={handleGoogleLogin}
+                    disabled={isLoading}
+                  >
+                    <LogIn className="w-4 h-4" />
+                    {isLoading ? "Attendere..." : "Registrati con Google"}
+                  </Button>
                 </div>
               </CardContent>
               <CardFooter>
