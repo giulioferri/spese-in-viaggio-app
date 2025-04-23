@@ -41,14 +41,22 @@ export default function TripSelector({
   // Load trips on mount
   useEffect(() => {
     const loadTrips = async () => {
-      // Destructure the return value to get both trips array and debug info
-      const [loadedTrips, debugInfo] = await getTrips();
-      setTrips(loadedTrips);
-      setQueryDebugInfo(debugInfo);
-      
-      // Create a unique ID for the current trip
-      const currentTripId = `${currentLocation}|${currentDate}`;
-      setSelectedTrip(currentTripId);
+      try {
+        // Destructure the return value to get both trips array and debug info
+        const [loadedTrips, debugInfo] = await getTrips();
+        
+        // Aggiungiamo un log per vedere cosa contiene debugInfo
+        console.log("Debug info ricevuto in TripSelector:", debugInfo);
+        
+        setTrips(loadedTrips);
+        setQueryDebugInfo(debugInfo);
+        
+        // Create a unique ID for the current trip
+        const currentTripId = `${currentLocation}|${currentDate}`;
+        setSelectedTrip(currentTripId);
+      } catch (error) {
+        console.error("Errore nel caricamento delle trasferte:", error);
+      }
     };
     
     loadTrips();
@@ -125,9 +133,11 @@ export default function TripSelector({
         </Select>
       </div>
 
-      {/* Mostra il debug della query */}
+      {/* Mostra il debug della query - mostrato sempre per aiutare il debug */}
       {queryDebugInfo && (
-        <QueryDebug queryInfo={queryDebugInfo} />
+        <div className="mt-2">
+          <QueryDebug queryInfo={queryDebugInfo} />
+        </div>
       )}
 
       {isNewTrip && (
