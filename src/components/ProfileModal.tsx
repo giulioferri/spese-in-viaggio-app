@@ -1,3 +1,4 @@
+
 import { useRef, useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -21,13 +22,18 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
   const { profile, setProfile, isLoading, error } = useProfile();
   const [tempProfile, setTempProfile] = useState(profile);
   const [isSaving, setIsSaving] = useState(false);
+  const [needsReload, setNeedsReload] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
       setTempProfile(profile);
+      setNeedsReload(false);
+    } else if (needsReload) {
+      // Ricarica la pagina quando la modale viene chiusa dopo un salvataggio
+      window.location.reload();
     }
-  }, [open, profile]);
+  }, [open, profile, needsReload]);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -48,6 +54,7 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
     setIsSaving(true);
     try {
       await setProfile(tempProfile);
+      setNeedsReload(true);
       onOpenChange(false);
     } catch (err) {
       console.error("Error saving profile:", err);
@@ -93,7 +100,13 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      if (!isOpen && needsReload) {
+        // Se la modale viene chiusa dopo un salvataggio, attendi un momento e ricarica
+        setTimeout(() => window.location.reload(), 100);
+      }
+      onOpenChange(isOpen);
+    }}>
       <DialogContent className="max-w-sm w-full">
         <DialogHeader>
           <DialogTitle><User className="inline mr-2" /> Profilo Utente</DialogTitle>

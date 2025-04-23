@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -49,7 +48,7 @@ export function useProfile() {
       setIsLoading(true);
       try {
         // Using raw query since the profiles table isn't in the TypeScript types yet
-        const { data, error } = await (supabase as any)
+        const { data, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', userId)
@@ -57,6 +56,11 @@ export function useProfile() {
 
         if (error && error.code !== "PGRST116") {
           setError(`Errore durante il caricamento del profilo: ${error.message}`);
+          toast({
+            title: "Errore",
+            description: `Errore durante il caricamento del profilo: ${error.message}`,
+            variant: "destructive",
+          });
         }
 
         if (data) {
@@ -70,13 +74,14 @@ export function useProfile() {
         } else {
           // If the profile doesn't exist yet, create a new one using upsert instead of insert
           const localProfile = getStoredProfile();
-          const { error: upsertError } = await (supabase as any)
+          const { error: upsertError } = await supabase
             .from('profiles')
             .upsert({
               id: userId,
               photo: localProfile.photo,
               palette: localProfile.palette,
             });
+          
           if (upsertError) {
             setError(`Errore durante la creazione del profilo: ${upsertError.message}`);
             toast({
@@ -107,6 +112,8 @@ export function useProfile() {
   const setProfile = async (updater: UserProfile | ((p: UserProfile) => UserProfile)) => {
     const newProfile = typeof updater === "function" ? updater(profile) : updater;
     const updatedProfile = { ...newProfile, id: userId };
+    
+    // Aggiorna immediatamente lo stato locale per riflettere il cambiamento UI
     setProfileState(updatedProfile);
     localStorage.setItem(PROFILE_KEY, JSON.stringify(updatedProfile));
 
@@ -125,13 +132,17 @@ export function useProfile() {
         const blob = new Blob([new Uint8Array(byteArrays)], { type: fileType });
         const fileName = `avatar-${userId}.${extension}`;
 
+        console.log("Uploading photo to Supabase Storage...");
+        
         // Upload the photo to the "profile_photos" bucket
-        const { error: uploadError } = await supabase.storage
+        const { error: uploadError, data: uploadData } = await supabase.storage
           .from("profile_photos")
           .upload(fileName, blob, { cacheControl: "3600", upsert: true });
 
-        // Check for errors other than "resource already exists"
+        // Check for errors
         if (uploadError) {
+          console.error("Upload error:", uploadError);
+          
           if (uploadError.message !== 'The resource already exists') {
             toast({
               title: "Errore",
@@ -142,13 +153,16 @@ export function useProfile() {
           }
         }
 
+        console.log("Upload successful, getting public URL...");
+        
         // Get the public URL
         const { data: urlData } = supabase.storage
           .from("profile_photos")
           .getPublicUrl(fileName);
 
         if (urlData?.publicUrl) {
-          photoUrl = urlData.publicUrl;
+          photoUrl = urlData.publicUrl + "?t=" + new Date().getTime(); // Add timestamp to prevent caching
+          console.log("Photo URL:", photoUrl);
         }
       } catch (err) {
         // Error in upload: keep in localStorage only
@@ -158,7 +172,13 @@ export function useProfile() {
 
     // Update/create record in the "profiles" table
     try {
-      const { error: updateError } = await (supabase as any)
+      console.log("Updating profile in database:", {
+        id: userId,
+        photo: photoUrl,
+        palette: updatedProfile.palette,
+      });
+      
+      const { error: updateError } = await supabase
         .from('profiles')
         .upsert({
           id: userId,
@@ -166,7 +186,9 @@ export function useProfile() {
           palette: updatedProfile.palette,
           updated_at: new Date().toISOString(),
         });
+        
       if (updateError) {
+        console.error("Profile update error:", updateError);
         toast({
           title: "Errore",
           description: `Errore durante l'aggiornamento del profilo: ${updateError.message}`,
@@ -174,9 +196,21 @@ export function useProfile() {
         });
         throw new Error(`Errore durante l'aggiornamento del profilo: ${updateError.message}`);
       }
+      
+      // Se l'URL della foto è cambiato a causa dell'upload, aggiorna lo stato locale
       if (photoUrl !== updatedProfile.photo) {
         setProfileState((prev) => ({ ...prev, photo: photoUrl }));
+        localStorage.setItem(PROFILE_KEY, JSON.stringify({ ...updatedProfile, photo: photoUrl }));
       }
+      
+      // Notifica di successo
+      toast({
+        title: "Successo",
+        description: "Profilo aggiornato con successo",
+      });
+      
+      console.log("Profile updated successfully");
+      return true;
     } catch (err) {
       console.error("Errore nell'aggiornamento profilo:", err);
       toast({
@@ -184,6 +218,7 @@ export function useProfile() {
         description: `Errore nell'aggiornamento profilo: ${err instanceof Error ? err.message : String(err)}`,
         variant: "destructive",
       });
+      return false;
     }
   };
 
