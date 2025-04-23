@@ -1,3 +1,4 @@
+
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button";
@@ -78,14 +79,16 @@ export default function Layout() {
                 )}
               </Avatar>
             </button>
-            <Button 
-              variant="secondary" 
-              size="sm" 
+            <Link
+              to="/login"
               onClick={handleSignOut}
-              className="text-white hover:bg-white/20 hover:text-[#333333]"
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "sm" }),
+                "text-white hover:bg-white/20 hover:text-[#333333]"
+              )}
             >
               Esci
-            </Button>
+            </Link>
           </nav>
         </div>
       </header>
@@ -99,3 +102,4 @@ export default function Layout() {
     </div>
   );
 }
+
