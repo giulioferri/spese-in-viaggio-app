@@ -51,7 +51,7 @@ export default function DiagnosticPage() {
         variant: results.success ? "default" : "destructive",
       });
       
-      // Riesegui diagnostica
+      // Run diagnostic again after fixing
       if (results.success) {
         await runDiagnostic();
       }

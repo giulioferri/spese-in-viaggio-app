@@ -103,7 +103,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      debug_get_all_trips: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          location: string
+          date: string
+          user_id: string
+          created_at: string
+          updated_at: string
+        }[]
+      }
+      fix_orphaned_trips_for_user: {
+        Args: { current_user_id: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never

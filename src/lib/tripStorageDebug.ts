@@ -1,71 +1,65 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/integrations/supabase/types";
 
-/**
- * Funzione di debug per verificare le RLS policies e le associazioni ID utente
- */
+type Trip = Database['public']['Tables']['trips']['Row'];
+
 export const debugRlsPolicies = async () => {
   try {
-    // 1. Verifica l'utente corrente
+    // 1. Verify current session
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) {
-      console.error("🔍 DEBUG - Errore nel recupero della sessione:", sessionError);
-      return { success: false, error: "Sessione non disponibile" };
+      console.error("🔍 DEBUG - Session error:", sessionError);
+      return { success: false, error: "Session not available" };
     }
 
     if (!sessionData.session) {
-      console.log("🔍 DEBUG - Nessuna sessione attiva");
-      return { success: false, error: "Nessuna sessione attiva" };
+      console.log("🔍 DEBUG - No active session");
+      return { success: false, error: "No active session" };
     }
 
     const currentUserId = sessionData.session.user.id;
-    console.log("🔍 DEBUG - Utente autenticato:", currentUserId);
+    console.log("🔍 DEBUG - Authenticated user:", currentUserId);
     console.log("🔍 DEBUG - Email:", sessionData.session.user.email);
 
-    // 2. Verifica della connessione a Supabase e dei token
-    console.log("🔍 DEBUG - Token di accesso:", sessionData.session.access_token?.substring(0, 10) + "...");
+    // 2. Check auth tokens
+    console.log("🔍 DEBUG - Access token:", sessionData.session.access_token?.substring(0, 10) + "...");
     
-    // 3. Recupera TUTTI i trips senza filtri (per debug)
+    // 3. Get ALL trips without RLS filter (debug function)
     const { data: allTripsData, error: allTripsError } = await supabase.rpc('debug_get_all_trips');
     
     if (allTripsError) {
-      console.error("🔍 DEBUG - Errore nella funzione RPC debug_get_all_trips:", allTripsError);
-      return { success: false, error: "Errore nel recupero di tutti i trips" };
+      console.error("🔍 DEBUG - RPC debug_get_all_trips error:", allTripsError);
+      return { success: false, error: "Error fetching all trips" };
     }
 
-    // 4. Recupera i trips dell'utente corrente secondo RLS
+    // 4. Get user's trips with RLS
     const { data: userTripsData, error: userTripsError } = await supabase
       .from('trips')
       .select('id, location, date, user_id')
       .order('date', { ascending: false });
 
     if (userTripsError) {
-      console.error("🔍 DEBUG - Errore nel recupero dei trips dell'utente:", userTripsError);
-      return { success: false, error: "Errore nel recupero dei trips dell'utente" };
+      console.error("🔍 DEBUG - User trips error:", userTripsError);
+      return { success: false, error: "Error fetching user trips" };
     }
 
-    // 5. Stampa risultati di debug
-    console.log("🔍 DEBUG - Tutti i trips nel database:", allTripsData);
-    console.log("🔍 DEBUG - Trips filtrati da RLS:", userTripsData);
+    // 5. Print debug results
+    console.log("🔍 DEBUG - All trips in database:", allTripsData || []);
+    console.log("🔍 DEBUG - RLS filtered trips:", userTripsData);
     
-    // 6. Verifica dei user_id nei trips
-    const problemiUserIds = allTripsData.filter(trip => !trip.user_id || trip.user_id === null);
+    // 6. Check for trips without user_id
+    const problemiUserIds = (allTripsData || []).filter(trip => !trip.user_id);
     if (problemiUserIds.length > 0) {
-      console.warn("⚠️ DEBUG - Trovati trips senza user_id:", problemiUserIds);
+      console.warn("⚠️ DEBUG - Found trips without user_id:", problemiUserIds);
     }
 
-    // 7. Compara i risultati
-    const trovatiTripsFiltrati = userTripsData.length;
-    const totaleTrips = allTripsData.length;
+    // 7. Compare results
+    const trovatiTripsFiltrati = userTripsData?.length || 0;
+    const totaleTrips = allTripsData?.length || 0;
     
-    console.log(`🔍 DEBUG - Trips trovati: ${trovatiTripsFiltrati} su ${totaleTrips} totali`);
+    console.log(`🔍 DEBUG - Found trips: ${trovatiTripsFiltrati} of ${totaleTrips} total`);
     
-    if (trovatiTripsFiltrati === totaleTrips) {
-      console.error("❌ DEBUG - PROBLEMA RLS: l'utente vede tutti i trips!");
-    } else {
-      console.log("✅ DEBUG - RLS funzionante: l'utente vede solo i propri trips");
-    }
-
     return { 
       success: true, 
       totalTrips: totaleTrips,
@@ -74,36 +68,32 @@ export const debugRlsPolicies = async () => {
     };
     
   } catch (err) {
-    console.error("🔍 DEBUG - Errore generale:", err);
+    console.error("🔍 DEBUG - General error:", err);
     return { success: false, error: String(err) };
   }
 };
 
-// Funzione per correggere i dati esistenti assegnando l'utente corrente come proprietario
 export const fixOrphanedData = async () => {
   try {
     const { data: session } = await supabase.auth.getSession();
     if (!session.session) {
-      return { success: false, error: "Utente non autenticato" };
+      return { success: false, error: "User not authenticated" };
     }
     
-    const currentUserId = session.session.user.id;
-    
-    // Chiamata alla funzione RPC di Supabase che aggiorna i dati
     const { data, error } = await supabase.rpc('fix_orphaned_trips_for_user', {
-      current_user_id: currentUserId
+      current_user_id: session.session.user.id
     });
     
     if (error) {
-      console.error("Errore nella correzione dei dati orfani:", error);
+      console.error("Error fixing orphaned data:", error);
       return { success: false, error: error.message };
     }
     
-    console.log("✅ Correzione dati orfani completata:", data);
+    console.log("✅ Orphaned data fix completed:", data);
     return { success: true, updatedTrips: data };
     
   } catch (err) {
-    console.error("Errore generale nella correzione dei dati:", err);
+    console.error("General error fixing data:", err);
     return { success: false, error: String(err) };
   }
 };

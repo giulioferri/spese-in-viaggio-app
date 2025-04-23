@@ -1,3 +1,4 @@
+
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button";
@@ -5,7 +6,6 @@ import { cn } from "@/lib/utils";
 import ProfileModal from "./ProfileModal";
 import { useAuth } from "@/hooks/useAuth";
 
-// Create an updated Layout component that includes a link to the diagnostic page
 export default function Layout() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
@@ -52,7 +52,6 @@ export default function Layout() {
             >
               Diagnosi
             </Link>
-            <ProfileModal />
             <Button variant="outline" size="sm" onClick={handleSignOut}>
               Esci
             </Button>
