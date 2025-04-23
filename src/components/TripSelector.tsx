@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import { Calendar as CalendarIcon, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getTrips, setCurrentTrip } from "@/lib/tripStorage";
+import QueryDebug from "@/components/QueryDebug";
 
 interface Trip {
   location: string;
@@ -35,13 +36,15 @@ export default function TripSelector({
   const [date, setDate] = useState<Date | undefined>(new Date(currentDate));
   const [isNewTrip, setIsNewTrip] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState<string>("");
+  const [queryDebugInfo, setQueryDebugInfo] = useState<any>(null);
 
   // Load trips on mount
   useEffect(() => {
     const loadTrips = async () => {
-      // Destructure the return value to get only the trips array, not the debug info
-      const [loadedTrips] = await getTrips();
+      // Destructure the return value to get both trips array and debug info
+      const [loadedTrips, debugInfo] = await getTrips();
       setTrips(loadedTrips);
+      setQueryDebugInfo(debugInfo);
       
       // Create a unique ID for the current trip
       const currentTripId = `${currentLocation}|${currentDate}`;
@@ -121,6 +124,11 @@ export default function TripSelector({
           </SelectContent>
         </Select>
       </div>
+
+      {/* Mostra il debug della query */}
+      {queryDebugInfo && (
+        <QueryDebug queryInfo={queryDebugInfo} />
+      )}
 
       {isNewTrip && (
         <div className="space-y-4 p-4 border rounded-md">
