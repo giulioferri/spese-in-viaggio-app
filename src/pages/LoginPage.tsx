@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,15 +7,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, LogIn } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { signIn, signUp, signInWithGoogle, isLoading } = useAuth();
+  const { signIn, signUp, signInWithGoogle, isLoading, user } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    console.log("🔑 LoginPage: Checking if user is already logged in", user?.email);
+    if (user) {
+      console.log("🔑 LoginPage: User already logged in, redirecting to home");
+      navigate("/");
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log(`🔑 LoginPage: Form submitted with ${activeTab}`, { email });
     if (activeTab === "login") {
       await signIn(email, password);
     } else {
@@ -23,8 +34,8 @@ export default function LoginPage() {
     }
   };
 
-  // Social login handler
   const handleGoogleLogin = async () => {
+    console.log("🔑 LoginPage: Google login initiated");
     await signInWithGoogle();
   };
 

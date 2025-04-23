@@ -1,3 +1,4 @@
+
 import { useEffect, useState, createContext, useContext, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,34 +25,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log("🔐 Setting up auth listener");
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
+        console.log(`🔐 Auth state changed: ${event}`, newSession?.user?.email);
         setSession(newSession);
         setUser(newSession?.user ?? null);
         
         if (newSession?.user) {
           setTimeout(() => {
-            console.log("User session updated:", newSession.user.id);
+            console.log("🔐 User session updated:", newSession.user.id, newSession.user.email);
           }, 0);
+        } else {
+          console.log("🔐 No active user session");
         }
       }
     );
 
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      console.log("🔐 Initial session check:", currentSession?.user?.email || "No session");
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       setIsLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      console.log("🔐 Cleaning up auth listener");
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log("🔐 Attempting sign in with email:", email);
       setIsLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error, data } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
+        console.error("🔐 Sign in error:", error);
         toast({
           title: "Errore di accesso",
           description: error.message,
@@ -60,9 +72,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       
+      console.log("🔐 Sign in successful:", data?.user?.email);
       navigate("/");
     } catch (error) {
-      console.error("Error during sign in:", error);
+      console.error("🔐 Unexpected error during sign in:", error);
       toast({
         title: "Errore di accesso",
         description: "Si è verificato un errore durante il login",
@@ -75,8 +88,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signUp = async (email: string, password: string) => {
     try {
+      console.log("🔐 Attempting sign up with email:", email);
       setIsLoading(true);
-      const { error } = await supabase.auth.signUp({ 
+      const { error, data } = await supabase.auth.signUp({ 
         email, 
         password,
         options: {
@@ -85,6 +99,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       
       if (error) {
+        console.error("🔐 Sign up error:", error);
         toast({
           title: "Errore di registrazione",
           description: error.message,
@@ -93,12 +108,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       
+      console.log("🔐 Sign up successful:", data?.user?.email);
       toast({
         title: "Registrazione completata",
         description: "Controlla la tua email per confermare la registrazione",
       });
     } catch (error) {
-      console.error("Error during sign up:", error);
+      console.error("🔐 Unexpected error during sign up:", error);
       toast({
         title: "Errore di registrazione",
         description: "Si è verificato un errore durante la registrazione",
@@ -111,10 +127,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     try {
+      console.log("🔐 Signing out");
       await supabase.auth.signOut();
+      console.log("🔐 Sign out successful");
       navigate("/login");
     } catch (error) {
-      console.error("Error during sign out:", error);
+      console.error("🔐 Error during sign out:", error);
       toast({
         title: "Errore",
         description: "Si è verificato un errore durante il logout",
@@ -125,8 +143,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signInWithGoogle = async () => {
     setIsLoading(true);
+    console.log("🔐 Attempting Google sign in");
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { error, data } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: window.location.origin,
@@ -134,15 +153,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (error) {
+        console.error("🔐 Google sign in error:", error);
         toast({
           title: "Errore di accesso (Google)",
           description: error.message,
           variant: "destructive",
         });
         setIsLoading(false);
+      } else {
+        console.log("🔐 Google auth initiated, redirecting...", data);
       }
     } catch (error) {
-      console.error("Errore durante il login Google:", error);
+      console.error("🔐 Unexpected error during Google sign in:", error);
       toast({
         title: "Errore di accesso (Google)",
         description: "Si è verificato un errore durante il login con Google",
