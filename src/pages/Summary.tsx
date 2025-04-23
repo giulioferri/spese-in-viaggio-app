@@ -198,6 +198,7 @@ export default function Summary() {
                         variant="outline" 
                         size="icon"
                         onClick={() => exportTripToZip(trip)}
+                        className="bg-primary/30 hover:bg-primary/40"
                       >
                         <Download size={18} />
                         <span className="sr-only">Esporta trasferta</span>
