@@ -17,29 +17,44 @@ export default function LoginPage() {
   const [activeTab, setActiveTab] = useState("login");
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [checkingAuth, setCheckingAuth] = useState(true);
   
   useEffect(() => {
-    console.log("🔑 LoginPage: Checking if user is already logged in", user?.email);
-
-    // Controlla se ci sono parametri nell'URL che indicano un errore di reindirizzamento
-    const urlParams = new URLSearchParams(window.location.search);
-    const error = urlParams.get('error');
-    const errorDescription = urlParams.get('error_description');
+    // Separate state for checking auth to prevent redirect loop
+    const checkAuth = async () => {
+      try {
+        console.log("🔑 LoginPage: Checking if user is already logged in", user?.email);
+        
+        // Controlla se ci sono parametri nell'URL che indicano un errore di reindirizzamento
+        const urlParams = new URLSearchParams(window.location.search);
+        const error = urlParams.get('error');
+        const errorDescription = urlParams.get('error_description');
+        
+        if (error) {
+          console.error(`🔑 LoginPage: URL contains error: ${error}`, errorDescription);
+          toast({
+            title: "Errore di autenticazione",
+            description: errorDescription || "Si è verificato un errore durante l'autenticazione",
+            variant: "destructive",
+          });
+        }
+        
+        if (user) {
+          console.log("🔑 LoginPage: User already logged in, redirecting to home");
+          navigate("/");
+        }
+      } catch (err) {
+        console.error("🔑 LoginPage: Error checking authentication", err);
+      } finally {
+        setCheckingAuth(false);
+      }
+    };
     
-    if (error) {
-      console.error(`🔑 LoginPage: URL contains error: ${error}`, errorDescription);
-      toast({
-        title: "Errore di autenticazione",
-        description: errorDescription || "Si è verificato un errore durante l'autenticazione",
-        variant: "destructive",
-      });
+    // Only run the check if we're still in checking state
+    if (checkingAuth) {
+      checkAuth();
     }
-    
-    if (user) {
-      console.log("🔑 LoginPage: User already logged in, redirecting to home");
-      navigate("/");
-    }
-  }, [user, navigate, toast]);
+  }, [user, navigate, toast, checkingAuth]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +90,15 @@ export default function LoginPage() {
       });
     }
   };
+
+  // Show loading state while checking authentication
+  if (checkingAuth) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-secondary/20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-secondary/20 px-4">

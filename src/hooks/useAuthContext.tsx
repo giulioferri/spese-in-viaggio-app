@@ -12,44 +12,59 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
+    let subscription: { unsubscribe: () => void } | null = null;
+    
     try {
       console.log("🔑 AuthProvider: Setting up auth state listener");
       
       // Set up auth state listener FIRST
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      const { data } = supabase.auth.onAuthStateChange(
         (event, newSession) => {
           console.log(`🔑 AuthProvider: Auth state changed: ${event}`, newSession?.user?.email);
-          setSession(newSession);
-          setUser(newSession?.user ?? null);
           
+          // Handle state changes safely
           if (event === 'SIGNED_OUT') {
+            setSession(null);
+            setUser(null);
             console.log("🔑 AuthProvider: User signed out");
-          } else if (event === 'SIGNED_IN') {
-            console.log("🔑 AuthProvider: User signed in", newSession?.user?.email);
-          } else if (event === 'USER_UPDATED') {
-            console.log("🔑 AuthProvider: User updated");
+          } else {
+            setSession(newSession);
+            setUser(newSession?.user ?? null);
+            
+            if (event === 'SIGNED_IN') {
+              console.log("🔑 AuthProvider: User signed in", newSession?.user?.email);
+            } else if (event === 'USER_UPDATED') {
+              console.log("🔑 AuthProvider: User updated");
+            }
           }
         }
       );
       
-      // THEN check for existing session
-      supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-        console.log("🔑 AuthProvider: Checking for existing session", currentSession?.user?.email);
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        setIsLoading(false);
-      }).catch(error => {
-        console.error("🔑 AuthProvider: Error getting session", error);
-        setIsLoading(false);
-      });
+      subscription = data.subscription;
       
-      return () => {
-        console.log("🔑 AuthProvider: Cleaning up auth subscription");
-        subscription.unsubscribe();
-      };
+      // THEN check for existing session
+      supabase.auth.getSession()
+        .then(({ data: { session: currentSession } }) => {
+          console.log("🔑 AuthProvider: Checking for existing session", currentSession?.user?.email);
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+        })
+        .catch(error => {
+          console.error("🔑 AuthProvider: Error getting session", error);
+          toast({
+            title: "Errore di autenticazione",
+            description: "Si è verificato un problema nel recupero della sessione",
+            variant: "destructive",
+          });
+        })
+        .finally(() => {
+          setIsLoading(false);
+          setInitialized(true);
+        });
     } catch (error) {
       console.error("🔑 AuthProvider: Unexpected error in auth setup", error);
       toast({
@@ -58,7 +73,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         variant: "destructive",
       });
       setIsLoading(false);
+      setInitialized(true);
     }
+    
+    return () => {
+      console.log("🔑 AuthProvider: Cleaning up auth subscription");
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+    };
   }, [toast]);
 
   const { signIn, signUp, signOut, signInWithGoogle } = useAuthActions({
@@ -66,6 +89,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setSession,
     setIsLoading,
   });
+
+  // Only render children when auth is initialized to prevent flashing
+  if (!initialized) {
+    return null;
+  }
 
   return (
     <AuthContext.Provider
