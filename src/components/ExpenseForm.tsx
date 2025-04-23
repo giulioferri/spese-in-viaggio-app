@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,7 +55,12 @@ export default function ExpenseForm({ location, date, onExpenseAdded }: ExpenseF
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) {
-        setError("Errore nel caricamento dell'immagine");
+        console.error("Upload error:", uploadError);
+        if (uploadError.message.includes("Permission denied")) {
+          setError("Errore di permesso: assicurati di aver effettuato il login");
+        } else {
+          setError("Errore nel caricamento dell'immagine");
+        }
         return;
       }
 
@@ -64,7 +70,8 @@ export default function ExpenseForm({ location, date, onExpenseAdded }: ExpenseF
 
       setPhotoUrl(publicUrl);
       setPhotoPath(filePath);
-    } catch {
+    } catch (err) {
+      console.error("Error during upload:", err);
       setError("Errore nel caricamento della foto");
     } finally {
       setIsUploading(false);
@@ -105,7 +112,12 @@ export default function ExpenseForm({ location, date, onExpenseAdded }: ExpenseF
 
       onExpenseAdded();
     } catch (err: any) {
-      setError(err.message || "Si è verificato un errore");
+      console.error("Submission error:", err);
+      if (err.message?.includes("Permission denied")) {
+        setError("Errore di permesso: assicurati di aver effettuato il login");
+      } else {
+        setError(err.message || "Si è verificato un errore");
+      }
     } finally {
       setIsSubmitting(false);
     }

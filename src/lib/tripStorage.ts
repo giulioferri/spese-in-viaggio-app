@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Expense {
@@ -101,6 +102,9 @@ export const addExpense = async (
   if (!tripId) {
     throw new Error("Impossibile salvare la spesa: nessuna trasferta trovata");
   }
+  
+  // Non è necessario specificare user_id poiché abbiamo implementato un trigger
+  // che imposta automaticamente user_id = auth.uid() per le nuove trips
   await supabase
     .from("expenses")
     .insert({
