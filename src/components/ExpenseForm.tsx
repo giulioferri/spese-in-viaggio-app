@@ -1,11 +1,10 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Camera } from "lucide-react";
 import { addExpense, Expense } from "@/lib/tripStorage";
-import { supabase } from "@/integrations/supabase/client";
+import { PhotoUpload } from "./expenses/PhotoUpload";
+import { ExpenseFields } from "./expenses/ExpenseFields";
 
 interface ExpenseFormProps {
   location: string;
@@ -22,58 +21,12 @@ export default function ExpenseForm({ location, date, onExpenseAdded }: ExpenseF
   const [comment, setComment] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
   const [photoPath, setPhotoPath] = useState<string | undefined>(undefined);
-  const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    setError("");
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 10 * 1024 * 1024) {
-      setError("L'immagine è troppo grande (max 10MB)");
-      return;
-    }
-    if (!file.type.startsWith("image/")) {
-      setError("Il file selezionato non è un'immagine");
-      return;
-    }
-
-    try {
-      setIsUploading(true);
-      const ext = file.name.split('.').pop() || "jpg";
-      const newId = generateId();
-      const filename = `scontrino-${newId}.${ext}`;
-      const filePath = `${location}/${date}/${filename}`;
-
-      const { data, error: uploadError } = await supabase
-        .storage
-        .from("expense_photos")
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) {
-        console.error("Upload error:", uploadError);
-        if (uploadError.message.includes("Permission denied")) {
-          setError("Errore di permesso: assicurati di aver effettuato il login");
-        } else {
-          setError("Errore nel caricamento dell'immagine");
-        }
-        return;
-      }
-
-      const {
-        data: { publicUrl }
-      } = supabase.storage.from("expense_photos").getPublicUrl(filePath);
-
-      setPhotoUrl(publicUrl);
-      setPhotoPath(filePath);
-    } catch (err) {
-      console.error("Error during upload:", err);
-      setError("Errore nel caricamento della foto");
-    } finally {
-      setIsUploading(false);
-    }
+  const handlePhotoUploaded = (url: string, path: string | undefined) => {
+    setPhotoUrl(url);
+    setPhotoPath(path);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -125,90 +78,28 @@ export default function ExpenseForm({ location, date, onExpenseAdded }: ExpenseF
     <Card className="mt-6">
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="photo">Foto della spesa</Label>
-            <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 bg-gray-50">
-              {photoUrl ? (
-                <div className="relative w-full">
-                  <img
-                    src={photoUrl}
-                    alt="Anteprima scontrino"
-                    className="mx-auto max-h-48 rounded-md object-contain"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="absolute top-2 right-2 bg-white"
-                    onClick={() => {
-                      setPhotoUrl("");
-                      setPhotoPath(undefined);
-                    }}
-                    disabled={isUploading || isSubmitting}
-                  >
-                    Cambia
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center text-center">
-                  <Camera className="h-10 w-10 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Carica una foto della spesa
-                  </p>
-                  <Label
-                    htmlFor="photo-upload"
-                    className="cursor-pointer bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                  >
-                    {isUploading ? "Caricamento..." : "Scegli foto"}
-                  </Label>
-                  <Input
-                    id="photo-upload"
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    className="hidden"
-                    onChange={handlePhotoChange}
-                    disabled={isUploading || isSubmitting}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
+          <PhotoUpload
+            location={location}
+            date={date}
+            photoUrl={photoUrl}
+            onPhotoUploaded={handlePhotoUploaded}
+            disabled={isSubmitting}
+          />
 
-          <div className="grid grid-cols-[1fr,2fr] gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="amount">Importo (€)</Label>
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                disabled={isSubmitting}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="comment">Commento</Label>
-              <Input
-                id="comment"
-                type="text"
-                placeholder="Descrizione della spesa..."
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                disabled={isSubmitting}
-              />
-            </div>
-          </div>
+          <ExpenseFields
+            amount={amount}
+            comment={comment}
+            onAmountChange={setAmount}
+            onCommentChange={setComment}
+            disabled={isSubmitting}
+          />
 
           {error && <p className="text-sm text-destructive">{error}</p>}
 
           <Button 
             type="submit" 
             className="w-full bg-primary" 
-            disabled={isSubmitting || isUploading}
+            disabled={isSubmitting}
           >
             {isSubmitting ? "Salvataggio..." : "Aggiungi Spesa"}
           </Button>
