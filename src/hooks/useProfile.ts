@@ -29,6 +29,8 @@ export function useProfile() {
       setIsLoading(true);
       try {
         const localProfile = getStoredProfile();
+        console.log("🧩 Loading profile for user ID:", userId);
+        console.log("🧩 Local profile:", localProfile);
 
         // Fetch profile from Supabase using UUID
         const { data, error } = await supabase
@@ -37,13 +39,13 @@ export function useProfile() {
           .eq("id", userId)
           .maybeSingle();
 
-        if (error && error.code !== "PGRST116") {
-          console.error("Error loading profile:", error);
+        if (error) {
+          console.error("🧩 Error loading profile:", error);
           setError(`Error loading profile: ${error.message}`);
         }
 
         if (data) {
-          console.log("Profile loaded from Supabase:", data);
+          console.log("🧩 Profile loaded from Supabase:", data);
           const supabaseProfile: UserProfile = {
             id: data.id,
             photo: data.photo ?? undefined,
@@ -52,7 +54,7 @@ export function useProfile() {
           setProfileState(supabaseProfile);
           localStorage.setItem(PROFILE_KEY, JSON.stringify(supabaseProfile));
         } else {
-          console.log("No profile found, creating new one with ID:", userId);
+          console.log("🧩 No profile found, creating new one with ID:", userId);
           // Create a new profile if none exists
           const { error: upsertError } = await supabase.from("profiles").upsert({
             id: userId,
@@ -61,22 +63,27 @@ export function useProfile() {
           });
 
           if (upsertError) {
-            console.error("Error creating profile:", upsertError);
+            console.error("🧩 Error creating profile:", upsertError);
             setError(`Error creating profile: ${upsertError.message}`);
           } else {
-            console.log("New profile created successfully");
+            console.log("🧩 New profile created successfully");
             setProfileState({ ...localProfile, id: userId });
             localStorage.setItem(PROFILE_KEY, JSON.stringify({ ...localProfile, id: userId }));
           }
         }
       } catch (err) {
-        console.error("Unexpected error:", err);
+        console.error("🧩 Unexpected error:", err);
         setError(`Unexpected error: ${String(err)}`);
       } finally {
         setIsLoading(false);
       }
     }
-    loadProfile();
+    
+    if (userId) {
+      loadProfile();
+    } else {
+      setIsLoading(false);
+    }
   }, [userId]);
 
   const setProfile = async (updater: UserProfile | ((p: UserProfile) => UserProfile)) => {
@@ -85,6 +92,9 @@ export function useProfile() {
       const newProfile = typeof updater === "function" ? updater(currProfile) : updater;
       const updatedProfile: UserProfile = { ...newProfile, id: userId };
 
+      console.log("🧩 Updating profile for user ID:", userId);
+      console.log("🧩 New profile data:", updatedProfile);
+      
       setProfileState(updatedProfile);
       localStorage.setItem(PROFILE_KEY, JSON.stringify(updatedProfile));
       let photoUrl = updatedProfile.photo;
@@ -92,7 +102,7 @@ export function useProfile() {
       // Upload avatar if data URL
       if (photoUrl && photoUrl.startsWith("data:image")) {
         try {
-          console.log("Uploading profile photo...");
+          console.log("🧩 Uploading profile photo...");
           const base64Data = photoUrl.split(",")[1];
           const fileType = photoUrl.split(";")[0].split(":")[1];
           const extension = fileType.split("/")[1];
@@ -103,29 +113,45 @@ export function useProfile() {
           }
           const blob = new Blob([new Uint8Array(byteArrays)], { type: fileType });
           const fileName = `avatar-${userId}.${extension}`;
+          
+          // Assicuriamoci che il bucket esista
+          try {
+            // Check if bucket exists and create if it doesn't
+            const { data: bucketData, error: bucketError } = await supabase.storage.getBucket('profile_photos');
+            
+            if (bucketError && bucketError.message.includes('not found')) {
+              console.log("🧩 Creating profile_photos bucket");
+              await supabase.storage.createBucket('profile_photos', {
+                public: true
+              });
+            }
+          } catch (bucketErr) {
+            console.error("🧩 Bucket check error:", bucketErr);
+          }
+          
           const { error: uploadError } = await supabase.storage
             .from("profile_photos")
             .upload(fileName, blob, { cacheControl: "3600", upsert: true });
 
-          if (uploadError && uploadError.message !== "The resource already exists") {
-            console.error("Error uploading photo:", uploadError);
+          if (uploadError) {
+            console.error("🧩 Error uploading photo:", uploadError);
             toast({
               title: "Errore",
               description: `Errore durante il caricamento della foto: ${uploadError.message}`,
               variant: "destructive",
             });
           } else {
-            console.log("Photo uploaded successfully");
+            console.log("🧩 Photo uploaded successfully");
             const { data: urlData } = supabase.storage
               .from("profile_photos")
               .getPublicUrl(fileName);
             if (urlData?.publicUrl) {
               photoUrl = `${urlData.publicUrl}?t=${new Date().getTime()}`;
-              console.log("Photo public URL:", photoUrl);
+              console.log("🧩 Photo public URL:", photoUrl);
             }
           }
         } catch (err) {
-          console.error("Avatar upload error:", err);
+          console.error("🧩 Avatar upload error:", err);
           toast({
             title: "Errore",
             description: "Errore durante il caricamento della foto",
@@ -133,16 +159,16 @@ export function useProfile() {
           });
         }
       } else if (photoUrl === undefined) {
-        console.log("Removing profile photo");
+        console.log("🧩 Removing profile photo");
       } else {
-        console.log("Using existing photo URL:", photoUrl);
+        console.log("🧩 Using existing photo URL:", photoUrl);
       }
 
       try {
         const validatedPalette = validatePalette(updatedProfile.palette);
         const photoValue = photoUrl === undefined ? null : photoUrl;
 
-        console.log("Saving profile to Supabase:", {
+        console.log("🧩 Saving profile to Supabase:", {
           id: userId,
           photo: photoValue,
           palette: validatedPalette
@@ -158,14 +184,14 @@ export function useProfile() {
           });
 
         if (updateError) {
-          console.error("Profile update error:", updateError);
+          console.error("🧩 Profile update error:", updateError);
           toast({
             title: "Attenzione",
             description: "Profilo aggiornato localmente, ma non è stato possibile sincronizzarlo",
             variant: "destructive",
           });
         } else {
-          console.log("Profile updated successfully in Supabase");
+          console.log("🧩 Profile updated successfully in Supabase");
           const validatedProfile: UserProfile = { 
             ...updatedProfile, 
             photo: photoUrl,
@@ -180,7 +206,7 @@ export function useProfile() {
         }
         return true;
       } catch (err) {
-        console.error("Profile update error:", err);
+        console.error("🧩 Profile update error:", err);
         toast({
           title: "Errore",
           description: "Non è stato possibile aggiornare il profilo online",
@@ -189,7 +215,7 @@ export function useProfile() {
         return false;
       }
     } catch (e) {
-      console.error("Critical error in setProfile:", e);
+      console.error("🧩 Critical error in setProfile:", e);
       toast({
         title: "Errore",
         description: "Si è verificato un errore durante l'aggiornamento del profilo",

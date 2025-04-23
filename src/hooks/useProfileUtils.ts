@@ -1,5 +1,6 @@
 
 import { UserProfile } from "./useProfile";
+import { supabase } from "@/integrations/supabase/client";
 
 export const PROFILE_KEY = "spese-trasferta-profile";
 
@@ -26,25 +27,38 @@ export function getStoredProfile(): UserProfile {
   return { palette: "default" };
 }
 
-// Generate or reuse the logged-in user id (as UUID string)
+// Determine whether to use logged in user ID or anonymous ID
 export function getOrCreateUserId(): string {
   try {
-    let userId = localStorage.getItem('anonymous_user_id');
+    // First check if there's an authenticated user
+    const session = supabase.auth.getSession();
+    const authUserId = session?.data?.session?.user?.id;
+    
+    if (authUserId) {
+      console.log("Using authenticated user ID:", authUserId);
+      return authUserId;
+    }
+    
+    // If no authenticated user, use/create anonymous ID
+    let anonymousId = localStorage.getItem('anonymous_user_id');
 
     // Check if it's a valid uuid (at least basic pattern)
     const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (userId && uuidPattern.test(userId)) {
-      return userId;
+    if (anonymousId && uuidPattern.test(anonymousId)) {
+      console.log("Using existing anonymous ID:", anonymousId);
+      return anonymousId;
     }
     
     // Generate a new UUID if none exists or it's invalid
-    userId = crypto.randomUUID();
-    console.log("Generated new UUID for user:", userId);
-    localStorage.setItem('anonymous_user_id', userId);
-    return userId;
+    anonymousId = crypto.randomUUID();
+    console.log("Generated new anonymous UUID:", anonymousId);
+    localStorage.setItem('anonymous_user_id', anonymousId);
+    return anonymousId;
   } catch (e) {
     console.error("Error with user ID:", e);
-    return crypto.randomUUID();
+    const fallbackId = crypto.randomUUID();
+    localStorage.setItem('anonymous_user_id', fallbackId);
+    return fallbackId;
   }
 }
 
