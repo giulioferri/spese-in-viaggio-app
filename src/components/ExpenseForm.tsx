@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,8 +32,8 @@ export default function ExpenseForm({ location, date, onExpenseAdded }: ExpenseF
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      setError("L'immagine è troppo grande (max 5MB)");
+    if (file.size > 10 * 1024 * 1024) {
+      setError("L'immagine è troppo grande (max 10MB)");
       return;
     }
     if (!file.type.startsWith("image/")) {
@@ -42,7 +41,6 @@ export default function ExpenseForm({ location, date, onExpenseAdded }: ExpenseF
       return;
     }
 
-    // Upload to Supabase storage
     try {
       setIsUploading(true);
       const ext = file.name.split('.').pop() || "jpg";
@@ -60,7 +58,6 @@ export default function ExpenseForm({ location, date, onExpenseAdded }: ExpenseF
         return;
       }
 
-      // Get public URL
       const {
         data: { publicUrl }
       } = supabase.storage.from("expense_photos").getPublicUrl(filePath);
@@ -101,7 +98,6 @@ export default function ExpenseForm({ location, date, onExpenseAdded }: ExpenseF
 
       await addExpense(location, date, newExpense);
 
-      // Reset form
       setAmount("");
       setComment("");
       setPhotoUrl("");
