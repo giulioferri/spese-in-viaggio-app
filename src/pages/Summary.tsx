@@ -193,7 +193,7 @@ export default function Summary() {
                         .reduce((sum: number, exp: any) => sum + Number(exp.amount), 0)
                         .toFixed(2)}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right space-x-2">
                       <Button 
                         variant="outline" 
                         size="icon"
