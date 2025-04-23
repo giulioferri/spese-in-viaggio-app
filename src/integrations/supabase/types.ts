@@ -50,6 +50,27 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          id: string
+          palette: string
+          photo: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id: string
+          palette?: string
+          photo?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          palette?: string
+          photo?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       trips: {
         Row: {
           created_at: string

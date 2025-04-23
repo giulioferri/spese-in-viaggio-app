@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 // Simple profile shape
 export type UserProfile = {
@@ -40,6 +41,7 @@ export function useProfile() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const userId = getOrCreateUserId();
+  const { toast } = useToast();
 
   // Load profile from Supabase on component mount
   useEffect(() => {
@@ -66,30 +68,40 @@ export function useProfile() {
           setProfileState(supabaseProfile);
           localStorage.setItem(PROFILE_KEY, JSON.stringify(supabaseProfile)); // Sync fallback
         } else {
-          // If the profile doesn't exist yet, create a new one
+          // If the profile doesn't exist yet, create a new one using upsert instead of insert
           const localProfile = getStoredProfile();
-          const { error: createError } = await (supabase as any)
+          const { error: upsertError } = await (supabase as any)
             .from('profiles')
-            .insert({
+            .upsert({
               id: userId,
               photo: localProfile.photo,
               palette: localProfile.palette,
             });
-          if (createError) {
-            setError(`Errore durante la creazione del profilo: ${createError.message}`);
+          if (upsertError) {
+            setError(`Errore durante la creazione del profilo: ${upsertError.message}`);
+            toast({
+              title: "Errore",
+              description: `Errore durante la creazione del profilo: ${upsertError.message}`,
+              variant: "destructive",
+            });
           } else {
             setProfileState({ ...localProfile, id: userId });
           }
         }
       } catch (err) {
         setError(`Errore imprevisto: ${err instanceof Error ? err.message : String(err)}`);
+        toast({
+          title: "Errore",
+          description: `Errore imprevisto: ${err instanceof Error ? err.message : String(err)}`,
+          variant: "destructive",
+        });
       } finally {
         setIsLoading(false);
       }
     }
 
     loadProfile();
-  }, [userId]);
+  }, [userId, toast]);
 
   // Save profile to Supabase whenever it changes
   const setProfile = async (updater: UserProfile | ((p: UserProfile) => UserProfile)) => {
@@ -121,6 +133,11 @@ export function useProfile() {
         // Check for errors other than "resource already exists"
         if (uploadError) {
           if (uploadError.message !== 'The resource already exists') {
+            toast({
+              title: "Errore",
+              description: `Errore durante il caricamento della foto: ${uploadError.message}`,
+              variant: "destructive",
+            });
             throw new Error(`Errore durante il caricamento della foto: ${uploadError.message}`);
           }
         }
@@ -150,6 +167,11 @@ export function useProfile() {
           updated_at: new Date().toISOString(),
         });
       if (updateError) {
+        toast({
+          title: "Errore",
+          description: `Errore durante l'aggiornamento del profilo: ${updateError.message}`,
+          variant: "destructive",
+        });
         throw new Error(`Errore durante l'aggiornamento del profilo: ${updateError.message}`);
       }
       if (photoUrl !== updatedProfile.photo) {
@@ -157,6 +179,11 @@ export function useProfile() {
       }
     } catch (err) {
       console.error("Errore nell'aggiornamento profilo:", err);
+      toast({
+        title: "Errore",
+        description: `Errore nell'aggiornamento profilo: ${err instanceof Error ? err.message : String(err)}`,
+        variant: "destructive",
+      });
     }
   };
 
