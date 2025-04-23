@@ -6,9 +6,6 @@ import { Loader2 } from "lucide-react";
 export default function ProtectedRoute() {
   const { user, isLoading } = useAuth();
   
-  console.log("🛡️ ProtectedRoute: Status check", { isAuthenticated: !!user, isLoading });
-  
-  // Provide a fallback UI while loading
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
@@ -18,15 +15,9 @@ export default function ProtectedRoute() {
     );
   }
 
-  // Redirect to login if not authenticated
   if (!user) {
-    console.log("🛡️ ProtectedRoute: No authenticated user, redirecting to login");
     return <Navigate to="/login" replace />;
   }
-
-  // If we're here, the user is authenticated
-  console.log("🛡️ ProtectedRoute: User authenticated", user.email);
   
-  // Render child routes if authenticated
   return <Outlet />;
 }

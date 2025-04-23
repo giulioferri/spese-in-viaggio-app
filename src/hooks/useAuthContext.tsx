@@ -1,3 +1,4 @@
+
 import { useEffect, useState, createContext, useContext, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,66 +13,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [initialized, setInitialized] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    let subscription: { unsubscribe: () => void } | null = null;
-    
-    const setupAuth = async () => {
+    // Impostazione iniziale per verificare la sessione esistente
+    const checkSession = async () => {
       try {
-        console.log("🔑 AuthProvider: Setting up auth state listener");
-        
-        // Set up auth state listener FIRST
-        const { data } = supabase.auth.onAuthStateChange((event, newSession) => {
-          console.log(`🔑 AuthProvider: Auth state changed: ${event}`, newSession?.user?.email);
-          
-          // Update state synchronously
-          setSession(newSession);
-          setUser(newSession?.user ?? null);
-          
-          // Update loading state for specific events
-          if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
-            setIsLoading(false);
-          }
-        });
-        
-        subscription = data.subscription;
-        
-        // THEN check for existing session
-        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+        console.log("🔑 AuthProvider: Checking for existing session");
+        const { data, error } = await supabase.auth.getSession();
         
         if (error) {
-          throw error;
+          console.error("🔑 AuthProvider: Error getting session", error);
+          setIsLoading(false);
+          return;
         }
         
-        console.log("🔑 AuthProvider: Checking for existing session", currentSession?.user?.email);
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        
-        // Always set loading to false after session check
+        setSession(data.session);
+        setUser(data.session?.user || null);
+        console.log("🔑 AuthProvider: Session check complete", !!data.session);
+      } catch (e) {
+        console.error("🔑 AuthProvider: Unexpected error", e);
+      } finally {
         setIsLoading(false);
-        setInitialized(true);
-      } catch (error) {
-        console.error("🔑 AuthProvider: Error in auth setup", error);
-        toast({
-          title: "Errore di autenticazione",
-          description: "Si è verificato un problema nell'inizializzazione dell'autenticazione",
-          variant: "destructive",
-        });
-        // Ensure we don't stay in loading state on error
-        setIsLoading(false);
-        setInitialized(true);
       }
     };
     
-    setupAuth();
-    
-    return () => {
-      console.log("🔑 AuthProvider: Cleaning up auth subscription");
-      if (subscription) {
-        subscription.unsubscribe();
+    // Imposta il listener per i cambiamenti di autenticazione
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, currentSession) => {
+        console.log(`🔑 AuthProvider: Auth state changed: ${event}`);
+        setSession(currentSession);
+        setUser(currentSession?.user || null);
       }
+    );
+    
+    checkSession();
+    
+    // Pulizia del listener quando il componente viene smontato
+    return () => {
+      authListener.subscription.unsubscribe();
     };
   }, [toast]);
 
@@ -81,12 +61,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading,
   });
 
-  // Only render children when auth is initialized
-  if (!initialized) {
+  // Mostra il loader solo durante il caricamento iniziale
+  if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="mt-2">Inizializzazione in corso...</p>
+        <p className="mt-2">Caricamento...</p>
       </div>
     );
   }
