@@ -102,16 +102,37 @@ export function useAuthActions({
 
   const signOut = async () => {
     try {
+      setIsLoading(true);
       console.log("🔑 Signing out");
-      await supabase.auth.signOut();
+      
+      // Clear session state first
+      setUser(null);
+      setSession(null);
+      
+      // Then perform the Supabase signout
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error("🔑 Signout error:", error);
+        toast({
+          title: "Errore",
+          description: "Si è verificato un errore durante il logout",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      console.log("🔑 Signout successful");
       navigate("/login");
     } catch (e) {
-      console.error("🔑 Signout error:", e);
+      console.error("🔑 Signout unexpected error:", e);
       toast({
         title: "Errore",
         description: "Si è verificato un errore durante il logout",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
