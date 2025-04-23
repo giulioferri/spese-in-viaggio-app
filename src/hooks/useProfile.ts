@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +35,14 @@ function getOrCreateUserId(): string {
   return userId;
 }
 
+// Ensure palette value is one of the allowed values
+function validatePalette(palette: string): "default" | "green" | "red" {
+  if (palette === "default" || palette === "green" || palette === "red") {
+    return palette;
+  }
+  return "default";
+}
+
 // This hook provides profile, setProfile, and functions to update parts
 export function useProfile() {
   const [profile, setProfileState] = useState<UserProfile>(getStoredProfile());
@@ -67,7 +76,7 @@ export function useProfile() {
           const supabaseProfile: UserProfile = {
             id: data.id,
             photo: data.photo,
-            palette: data.palette || "default",
+            palette: validatePalette(data.palette || "default"),
           };
           setProfileState(supabaseProfile);
           localStorage.setItem(PROFILE_KEY, JSON.stringify(supabaseProfile)); // Sync fallback
@@ -178,12 +187,15 @@ export function useProfile() {
         palette: updatedProfile.palette,
       });
       
+      // Validate palette before sending to database
+      const validatedPalette = validatePalette(updatedProfile.palette);
+      
       const { error: updateError } = await supabase
         .from('profiles')
         .upsert({
           id: userId,
           photo: photoUrl,
-          palette: updatedProfile.palette,
+          palette: validatedPalette,
           updated_at: new Date().toISOString(),
         });
         
@@ -199,8 +211,21 @@ export function useProfile() {
       
       // Se l'URL della foto è cambiato a causa dell'upload, aggiorna lo stato locale
       if (photoUrl !== updatedProfile.photo) {
-        setProfileState((prev) => ({ ...prev, photo: photoUrl }));
-        localStorage.setItem(PROFILE_KEY, JSON.stringify({ ...updatedProfile, photo: photoUrl }));
+        const validatedProfile = { 
+          ...updatedProfile, 
+          photo: photoUrl, 
+          palette: validatedPalette 
+        };
+        setProfileState(validatedProfile);
+        localStorage.setItem(PROFILE_KEY, JSON.stringify(validatedProfile));
+      } else if (validatedPalette !== updatedProfile.palette) {
+        // Se la palette è stata validata e cambiata, aggiorna lo stato locale
+        const validatedProfile = { 
+          ...updatedProfile, 
+          palette: validatedPalette 
+        };
+        setProfileState(validatedProfile);
+        localStorage.setItem(PROFILE_KEY, JSON.stringify(validatedProfile));
       }
       
       // Notifica di successo
