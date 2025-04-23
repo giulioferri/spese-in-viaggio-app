@@ -22,7 +22,7 @@ export default function Summary() {
   const { toast } = useToast();
 
   const loadTrips = async () => {
-    const loadedTrips = await getTrips();
+    const [loadedTrips] = await getTrips(); // Destrutturo per estrarre solo l'array di trasferte
     setTrips(loadedTrips);
   };
 
