@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
@@ -60,55 +59,49 @@ export function useProfile() {
     async function loadProfile() {
       setIsLoading(true);
       try {
-        // If Supabase is not available, use localStorage only
+        // Usa sempre Supabase se disponibile
         if (!supabase) {
-          console.warn("Supabase connection not available. Using localStorage only.");
           setProfileState(getStoredProfile());
           setIsLoading(false);
           return;
         }
 
-        // Try to fetch profile from Supabase
+        // Recupera profilo dalla tabella "profiles"
         const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
+          .from("profiles")
+          .select("*")
+          .eq("id", userId)
           .single();
 
-        if (error && error.code !== 'PGRST116') {
-          // PGRST116 means no rows returned, which is expected for new users
-          console.error("Error fetching profile:", error);
+        if (error && error.code !== "PGRST116") {
           setError(`Errore durante il caricamento del profilo: ${error.message}`);
         }
 
         if (data) {
-          // If profile exists in Supabase, use it
           const supabaseProfile: UserProfile = {
             id: data.id,
             photo: data.photo,
-            palette: data.palette || "default"
+            palette: data.palette || "default",
           };
           setProfileState(supabaseProfile);
+          localStorage.setItem(PROFILE_KEY, JSON.stringify(supabaseProfile)); // Sync fallback
         } else {
-          // If no profile in Supabase, create one with local data
+          // Se non esiste ancora, crea un nuovo profilo
           const localProfile = getStoredProfile();
           const { error: createError } = await supabase
-            .from('profiles')
+            .from("profiles")
             .insert({
               id: userId,
               photo: localProfile.photo,
-              palette: localProfile.palette
+              palette: localProfile.palette,
             });
-
           if (createError) {
-            console.error("Error creating profile:", createError);
             setError(`Errore durante la creazione del profilo: ${createError.message}`);
           } else {
             setProfileState({ ...localProfile, id: userId });
           }
         }
       } catch (err) {
-        console.error("Unexpected error:", err);
         setError(`Errore imprevisto: ${err instanceof Error ? err.message : String(err)}`);
       } finally {
         setIsLoading(false);
@@ -120,99 +113,76 @@ export function useProfile() {
 
   // Save profile to Supabase whenever it changes
   const setProfile = async (updater: UserProfile | ((p: UserProfile) => UserProfile)) => {
-    const newProfile = typeof updater === "function" 
-      ? updater(profile) 
-      : updater;
-    
-    // Always keep ID consistent
+    const newProfile = typeof updater === "function" ? updater(profile) : updater;
     const updatedProfile = { ...newProfile, id: userId };
-    
-    // Update local state immediately for responsiveness
     setProfileState(updatedProfile);
-    
-    // Persist to localStorage as fallback
     localStorage.setItem(PROFILE_KEY, JSON.stringify(updatedProfile));
-    
-    try {
-      // Skip Supabase operations if not available
-      if (!supabase) {
-        console.warn("Supabase connection not available. Profile saved to localStorage only.");
-        return;
-      }
-      
-      // Upload photo to Supabase storage if it's a data URL
-      let photoUrl = updatedProfile.photo;
-      if (photoUrl && photoUrl.startsWith('data:image')) {
-        // Extract base64 data and file type
-        const base64Data = photoUrl.split(',')[1];
-        const fileType = photoUrl.split(';')[0].split(':')[1];
-        const extension = fileType.split('/')[1];
-        
-        // Convert base64 to Blob
+
+    if (!supabase) return;
+
+    let photoUrl = updatedProfile.photo;
+    // Carica in Supabase Storage se è una data URL
+    if (photoUrl && photoUrl.startsWith("data:image")) {
+      try {
+        const base64Data = photoUrl.split(",")[1];
+        const fileType = photoUrl.split(";")[0].split(":")[1];
+        const extension = fileType.split("/")[1];
         const byteCharacters = atob(base64Data);
         const byteArrays = [];
-        
         for (let i = 0; i < byteCharacters.length; i++) {
           byteArrays.push(byteCharacters.charCodeAt(i));
         }
-        
         const blob = new Blob([new Uint8Array(byteArrays)], { type: fileType });
-        const fileName = `avatar-${userId}-${Date.now()}.${extension}`;
-        
-        // Upload to Supabase Storage
-        const { data: uploadData, error: uploadError } = await supabase
-          .storage
-          .from('profile_photos')
-          .upload(fileName, blob, {
-            cacheControl: '3600',
-            upsert: true,
-          });
-        
-        if (uploadError) {
-          console.error("Error uploading photo:", uploadError);
+        const fileName = `avatar-${userId}.${extension}`;
+
+        // Carica la foto sul bucket "profile_photos"
+        const { error: uploadError } = await supabase.storage
+          .from("profile_photos")
+          .upload(fileName, blob, { cacheControl: "3600", upsert: true });
+
+        if (uploadError && uploadError.statusCode !== "409") {
           throw new Error(`Errore durante il caricamento della foto: ${uploadError.message}`);
         }
-        
-        // Get public URL of the uploaded image
-        const { data: urlData } = supabase
-          .storage
-          .from('profile_photos')
+
+        // Ottieni l'URL pubblico
+        const { data: urlData } = supabase.storage
+          .from("profile_photos")
           .getPublicUrl(fileName);
-        
-        photoUrl = urlData.publicUrl;
+
+        if (urlData?.publicUrl) {
+          photoUrl = urlData.publicUrl;
+        }
+      } catch (err) {
+        // Errore in upload: mantieni solo in localStorage
+        console.error("Errore upload avatar:", err);
       }
-      
-      // Update Supabase profile record
+    }
+
+    // Aggiorna/crea record nella tabella "profiles"
+    try {
       const { error: updateError } = await supabase
-        .from('profiles')
+        .from("profiles")
         .upsert({
           id: userId,
           photo: photoUrl,
           palette: updatedProfile.palette,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         });
-      
       if (updateError) {
-        console.error("Error updating profile:", updateError);
         throw new Error(`Errore durante l'aggiornamento del profilo: ${updateError.message}`);
       }
-      
-      // Update state with the storage URL if it changed
       if (photoUrl !== updatedProfile.photo) {
-        setProfileState(prev => ({ ...prev, photo: photoUrl }));
+        setProfileState((prev) => ({ ...prev, photo: photoUrl }));
       }
-      
     } catch (err) {
-      console.error("Error in setProfile:", err);
-      // Keep using the local state even if Supabase update failed
-      // We could also set an error state here if needed
+      console.error("Errore nell'aggiornamento profilo:", err);
     }
   };
 
-  return { 
-    profile, 
-    setProfile, 
-    isLoading, 
-    error 
+  return {
+    profile,
+    setProfile,
+    isLoading,
+    error,
   };
 }

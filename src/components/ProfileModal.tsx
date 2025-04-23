@@ -1,4 +1,3 @@
-
 import { useRef, useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -24,7 +23,6 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
   const [isSaving, setIsSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // When modal opens, sync with actual profile
   useEffect(() => {
     if (open) {
       setTempProfile(profile);
