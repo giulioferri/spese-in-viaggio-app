@@ -106,7 +106,7 @@ export default function Summary() {
               </TableHeader>
               <TableBody>
                 {trips.map((trip, index) => (
-                  <TableRow key={index}>
+                  <TableRow key={trip.id ?? index}>
                     <TableCell className="font-medium">{trip.location}</TableCell>
                     <TableCell>{new Date(trip.date).toLocaleDateString('it-IT')}</TableCell>
                     <TableCell>{trip.expenses.length}</TableCell>

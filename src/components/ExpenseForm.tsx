@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Camera } from "lucide-react";
 import { addExpense, Expense } from "@/lib/tripStorage";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ExpenseFormProps {
   location: string;
@@ -14,39 +15,68 @@ interface ExpenseFormProps {
   onExpenseAdded: () => void;
 }
 
+function generateId() {
+  return crypto.randomUUID();
+}
+
 export default function ExpenseForm({ location, date, onExpenseAdded }: ExpenseFormProps) {
   const [amount, setAmount] = useState("");
   const [comment, setComment] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
+  const [photoPath, setPhotoPath] = useState<string | undefined>(undefined);
+  const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setError("");
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check file size and type
     if (file.size > 5 * 1024 * 1024) {
       setError("L'immagine è troppo grande (max 5MB)");
       return;
     }
-
     if (!file.type.startsWith("image/")) {
       setError("Il file selezionato non è un'immagine");
       return;
     }
 
-    setError("");
-    
-    // Create a temporary URL for the image
-    const imageUrl = URL.createObjectURL(file);
-    setPhotoUrl(imageUrl);
+    // Upload to Supabase storage
+    try {
+      setIsUploading(true);
+      const ext = file.name.split('.').pop() || "jpg";
+      const newId = generateId();
+      const filename = `scontrino-${newId}.${ext}`;
+      const filePath = `${location}/${date}/${filename}`;
+
+      const { data, error: uploadError } = await supabase
+        .storage
+        .from("expense_photos")
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) {
+        setError("Errore nel caricamento dell'immagine");
+        return;
+      }
+
+      // Get public URL
+      const {
+        data: { publicUrl }
+      } = supabase.storage.from("expense_photos").getPublicUrl(filePath);
+
+      setPhotoUrl(publicUrl);
+      setPhotoPath(filePath);
+    } catch {
+      setError("Errore nel caricamento della foto");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-
     if (!amount || !photoUrl) {
       setError("Inserisci l'importo e carica una foto della spesa");
       return;
@@ -55,32 +85,29 @@ export default function ExpenseForm({ location, date, onExpenseAdded }: ExpenseF
     try {
       setIsSubmitting(true);
 
-      // Convert amount to number and check if it's valid
       const numAmount = parseFloat(amount);
       if (isNaN(numAmount) || numAmount <= 0) {
         throw new Error("L'importo deve essere un numero positivo");
       }
 
-      // Create a new expense object
       const newExpense: Expense = {
-        id: Date.now().toString(),
+        id: generateId(),
         amount: numAmount,
         comment,
-        photoUrl,
+        photoUrl: photoUrl,
+        photoPath: photoPath,
         timestamp: Date.now(),
       };
 
-      // Add the expense to storage
       await addExpense(location, date, newExpense);
 
-      // Reset the form
+      // Reset form
       setAmount("");
       setComment("");
       setPhotoUrl("");
-      
-      // Notify the parent component
+      setPhotoPath(undefined);
+
       onExpenseAdded();
-      
     } catch (err: any) {
       setError(err.message || "Si è verificato un errore");
     } finally {
@@ -107,7 +134,11 @@ export default function ExpenseForm({ location, date, onExpenseAdded }: ExpenseF
                     variant="outline"
                     size="sm"
                     className="absolute top-2 right-2 bg-white"
-                    onClick={() => setPhotoUrl("")}
+                    onClick={() => {
+                      setPhotoUrl("");
+                      setPhotoPath(undefined);
+                    }}
+                    disabled={isUploading || isSubmitting}
                   >
                     Cambia
                   </Button>
@@ -122,7 +153,7 @@ export default function ExpenseForm({ location, date, onExpenseAdded }: ExpenseF
                     htmlFor="photo-upload"
                     className="cursor-pointer bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                   >
-                    Scegli foto
+                    {isUploading ? "Caricamento..." : "Scegli foto"}
                   </Label>
                   <Input
                     id="photo-upload"
@@ -131,6 +162,7 @@ export default function ExpenseForm({ location, date, onExpenseAdded }: ExpenseF
                     capture="environment"
                     className="hidden"
                     onChange={handlePhotoChange}
+                    disabled={isUploading || isSubmitting}
                   />
                 </div>
               )}
@@ -147,6 +179,7 @@ export default function ExpenseForm({ location, date, onExpenseAdded }: ExpenseF
               placeholder="0.00"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
+              disabled={isSubmitting}
             />
           </div>
 
@@ -157,6 +190,7 @@ export default function ExpenseForm({ location, date, onExpenseAdded }: ExpenseF
               placeholder="Descrizione della spesa..."
               value={comment}
               onChange={(e) => setComment(e.target.value)}
+              disabled={isSubmitting}
             />
           </div>
 
@@ -165,7 +199,7 @@ export default function ExpenseForm({ location, date, onExpenseAdded }: ExpenseF
           <Button 
             type="submit" 
             className="w-full bg-primary" 
-            disabled={isSubmitting}
+            disabled={isSubmitting || isUploading}
           >
             {isSubmitting ? "Salvataggio..." : "Aggiungi Spesa"}
           </Button>

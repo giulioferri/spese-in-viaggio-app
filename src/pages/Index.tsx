@@ -20,23 +20,16 @@ export default function Index() {
   useEffect(() => {
     const initializeTrip = async () => {
       try {
-        // Check if there's a current trip in local storage
         const currentTrip = getCurrentTrip();
         
         if (currentTrip) {
-          // Use the stored current trip
           setLocation(currentTrip.location);
           setDate(currentTrip.date);
-          
-          // Load expenses for the current trip
           const tripData = await getTrip(currentTrip.location, currentTrip.date);
           setExpenses(tripData?.expenses || []);
         } else {
-          // Use today's date and get location from device
           const today = format(new Date(), "yyyy-MM-dd");
           setDate(today);
-          
-          // The LocationInput component will handle getting the current location
         }
       } catch (error) {
         console.error("Error initializing trip:", error);

@@ -1,55 +1,82 @@
-// Type definitions
+import { supabase } from "@/integrations/supabase/client";
+
 export interface Expense {
   id: string;
   amount: number;
   comment: string;
   photoUrl: string;
+  photoPath?: string;
   timestamp: number;
 }
 
 export interface Trip {
+  id: string;
   location: string;
-  date: string; // ISO date string
+  date: string; // ISO date string (yyyy-MM-dd)
   expenses: Expense[];
 }
 
-// Local storage keys
-const TRIPS_STORAGE_KEY = 'spese_trasferta_trips';
-const CURRENT_TRIP_KEY = 'spese_trasferta_current_trip';
-
-// Get all trips
+// Fetch all trips (with expenses)
 export const getTrips = async (): Promise<Trip[]> => {
-  const tripsData = localStorage.getItem(TRIPS_STORAGE_KEY);
-  return tripsData ? JSON.parse(tripsData) : [];
-};
-
-// Save all trips
-export const saveTrips = async (trips: Trip[]): Promise<void> => {
-  localStorage.setItem(TRIPS_STORAGE_KEY, JSON.stringify(trips));
-};
-
-// Get a trip by location and date
-export const getTrip = async (location: string, date: string): Promise<Trip | undefined> => {
-  const trips = await getTrips();
-  return trips.find(
-    (trip) => trip.location === location && trip.date === date
-  );
-};
-
-// Add or update a trip
-export const saveTrip = async (trip: Trip): Promise<void> => {
-  const trips = await getTrips();
-  const existingTripIndex = trips.findIndex(
-    (t) => t.location === trip.location && t.date === trip.date
-  );
-
-  if (existingTripIndex >= 0) {
-    trips[existingTripIndex] = trip;
-  } else {
-    trips.push(trip);
+  const { data: tripsData, error: tripsError } = await supabase
+    .from('trips')
+    .select('id, location, date, expenses:expenses(id, amount, comment, photo_url, photo_path, timestamp)')
+    .order('date', { ascending: false });
+  if (tripsError) {
+    console.error("Errore nel recupero trasferte:", tripsError);
+    return [];
   }
+  return (tripsData || []).map((trip: any) => ({
+    ...trip,
+    expenses: (trip.expenses || []).map((exp: any) => ({
+      id: exp.id,
+      amount: Number(exp.amount),
+      comment: exp.comment || "",
+      photoUrl: exp.photo_url,
+      photoPath: exp.photo_path,
+      timestamp: typeof exp.timestamp === "string" ? new Date(exp.timestamp).getTime() : exp.timestamp
+    }))
+  }));
+};
 
-  await saveTrips(trips);
+// Save a trip (insert or update if exists)
+export const saveTrip = async (trip: Omit<Trip, "expenses">): Promise<string | null> => {
+  const { data, error } = await supabase
+    .from('trips')
+    .upsert({
+      id: trip.id,
+      location: trip.location,
+      date: trip.date, // ISO "yyyy-MM-dd"
+    }, { onConflict: "location,date" })
+    .select()
+    .maybeSingle();
+  if (error) {
+    console.error("Errore salvataggio trasferta:", error);
+    return null;
+  }
+  return data?.id || null;
+};
+
+// Get a single trip and its expenses
+export const getTrip = async (location: string, date: string): Promise<Trip | undefined> => {
+  const { data: trip, error } = await supabase
+    .from('trips')
+    .select('id, location, date, expenses:expenses(id, amount, comment, photo_url, photo_path, timestamp)')
+    .eq('location', location)
+    .eq('date', date)
+    .maybeSingle();
+  if (error || !trip) return undefined;
+  return {
+    ...trip,
+    expenses: (trip.expenses || []).map((exp: any) => ({
+      id: exp.id,
+      amount: Number(exp.amount),
+      comment: exp.comment || "",
+      photoUrl: exp.photo_url,
+      photoPath: exp.photo_path,
+      timestamp: typeof exp.timestamp === "string" ? new Date(exp.timestamp).getTime() : exp.timestamp
+    })),
+  };
 };
 
 // Add an expense to a trip
@@ -58,35 +85,54 @@ export const addExpense = async (
   date: string,
   expense: Expense
 ): Promise<void> => {
+  // Step 1: Ensure trip exists/get id
   let trip = await getTrip(location, date);
-
+  let tripId = trip?.id;
   if (!trip) {
-    trip = {
+    // Insert trip if not exists
+    const newTripId = await saveTrip({
+      id: undefined as any,
       location,
-      date,
-      expenses: [],
-    };
+      date
+    });
+    tripId = newTripId as string;
   }
-
-  trip.expenses.push(expense);
-  await saveTrip(trip);
+  // Step 2: Add expense
+  if (!tripId) {
+    throw new Error("Impossibile salvare la spesa: nessuna trasferta trovata");
+  }
+  await supabase
+    .from("expenses")
+    .insert({
+      id: expense.id,
+      amount: expense.amount,
+      comment: expense.comment,
+      photo_url: expense.photoUrl,
+      photo_path: expense.photoPath ?? null,
+      timestamp: new Date(expense.timestamp).toISOString(),
+      trip_id: tripId
+    });
 };
 
-// Remove an expense from a trip
+// Remove an expense from a trip (and delete its photo in storage)
 export const removeExpense = async (
   location: string,
   date: string,
   expenseId: string
 ): Promise<void> => {
   const trip = await getTrip(location, date);
-  
   if (!trip) return;
-  
-  trip.expenses = trip.expenses.filter((e) => e.id !== expenseId);
-  await saveTrip(trip);
+  const exp = trip.expenses.find(e => e.id === expenseId);
+  if (exp && exp.photoPath) {
+    // Remove from storage
+    await supabase.storage.from("expense_photos").remove([exp.photoPath]);
+  }
+  // Remove from db
+  await supabase.from("expenses").delete().eq("id", expenseId);
 };
 
-// Set current trip
+// Get/set current trip - keep in localStorage for UX
+const CURRENT_TRIP_KEY = 'spese_trasferta_current_trip';
 export const setCurrentTrip = (location: string, date: string): void => {
   localStorage.setItem(
     CURRENT_TRIP_KEY,
@@ -94,46 +140,31 @@ export const setCurrentTrip = (location: string, date: string): void => {
   );
 };
 
-// Get current trip
 export const getCurrentTrip = (): { location: string; date: string } | null => {
   const currentTripData = localStorage.getItem(CURRENT_TRIP_KEY);
-  
   if (!currentTripData) {
     return null;
   }
-  
   return JSON.parse(currentTripData);
 };
 
-// Funzione di utilità per rimuovere tutte le foto di una trasferta
+// Remove all photos from a trip (utilities, not strictly needed)
 export const removeTripPhotos = async (trip: Trip) => {
   for (const expense of trip.expenses) {
-    if (expense.photoUrl && expense.photoUrl.startsWith("https://xkqzwdubkxutogqcnapm.supabase.co/storage/")) {
-      try {
-        // Estrai il percorso del file dallo URL
-        const url = new URL(expense.photoUrl);
-        // Esempio: /storage/v1/object/public/profile_photos/avatar-xxxx-1234567.png
-        const parts = url.pathname.split("/");
-        const bucket = parts[5]; // "profile_photos"
-        const path = parts.slice(6).join("/"); // "avatar-xxxx-1234567.png"
-        const { supabase } = await import("@/integrations/supabase/client");
-        await supabase.storage.from(bucket).remove([path]);
-      } catch (e) {
-        // fallo silenziosamente, può trattarsi di una foto locale/non su Supabase
-        console.warn("Errore nella rimozione della foto:", e);
-      }
+    if (expense.photoPath) {
+      await supabase.storage.from("expense_photos").remove([expense.photoPath]);
     }
   }
 };
 
-// Rimuovi l'intera trasferta e le sue foto
+// Delete a whole trip and all related expenses/photos
 export const deleteTrip = async (location: string, date: string): Promise<void> => {
-  const trips = await getTrips();
-  const tripIndex = trips.findIndex((t) => t.location === location && t.date === date);
-  if (tripIndex >= 0) {
-    const trip = trips[tripIndex];
-    await removeTripPhotos(trip);
-    trips.splice(tripIndex, 1);
-    await saveTrips(trips);
-  }
+  const trip = await getTrip(location, date);
+  if (!trip) return;
+  // Remove photos of all expenses
+  await removeTripPhotos(trip);
+  // Remove trip (will cascade and delete all expenses)
+  await supabase.from('trips').delete().match({ location, date });
 };
+
+// Not used: getTrips already fetches expenses in one query

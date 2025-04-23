@@ -26,7 +26,7 @@ export default function ExpenseList({
   };
 
   // Calculate total expenses
-  const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const totalAmount = expenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
 
   return (
     <Card className="mt-6">
@@ -53,15 +53,14 @@ export default function ExpenseList({
                 />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-medium">€{expense.amount.toFixed(2)}</p>
+                <p className="font-medium">€{Number(expense.amount).toFixed(2)}</p>
                 <p className="text-sm text-muted-foreground line-clamp-2">
                   {expense.comment || "Nessuna descrizione"}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {new Date(expense.timestamp).toLocaleTimeString('it-IT', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                  })}
+                  {expense.timestamp
+                    ? new Date(expense.timestamp).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+                    : ""}
                 </p>
               </div>
               <div>

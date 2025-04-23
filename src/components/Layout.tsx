@@ -1,5 +1,3 @@
-
-
 import { Outlet } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { Home, PieChart, User, Loader2 } from "lucide-react";
@@ -50,7 +48,7 @@ export default function Layout() {
         <Outlet />
       </main>
       
-      {/* Bottom navigation */}
+      {/* Bottom navigation (fixed always on mobile) */}
       <nav className="bg-white p-4 border-t fixed bottom-0 left-0 w-full z-50 md:static md:w-auto md:z-auto">
         <div className="container flex justify-around">
           <Link to="/">
