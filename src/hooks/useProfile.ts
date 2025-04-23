@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -89,6 +90,7 @@ export function useProfile() {
       setProfileState(updatedProfile);
       localStorage.setItem(PROFILE_KEY, JSON.stringify(updatedProfile));
 
+      // Handle photo explicitly - if undefined, it means we want to remove it
       let photoUrl = updatedProfile.photo;
 
       // Se la foto profilo è una data URL, effettua upload su Supabase Storage
@@ -130,11 +132,14 @@ export function useProfile() {
       try {
         const validatedPalette = validatePalette(updatedProfile.palette);
 
+        // If photo is undefined (removed), explicitly set to null for database
+        const photoValue = photoUrl === undefined ? null : photoUrl;
+
         const { error: updateError } = await supabase
           .from("profiles")
           .upsert({
             id: userId,
-            photo: photoUrl,
+            photo: photoValue, // Important: use null instead of undefined for DB
             palette: validatedPalette,
             updated_at: new Date().toISOString(),
           });
@@ -147,7 +152,11 @@ export function useProfile() {
             variant: "destructive",
           });
         } else {
-          const validatedProfile: UserProfile = { ...updatedProfile, photo: photoUrl, palette: validatedPalette };
+          const validatedProfile: UserProfile = { 
+            ...updatedProfile, 
+            photo: photoUrl, // Keep undefined in the local state if removed
+            palette: validatedPalette 
+          };
           setProfileState(validatedProfile);
           localStorage.setItem(PROFILE_KEY, JSON.stringify(validatedProfile));
 

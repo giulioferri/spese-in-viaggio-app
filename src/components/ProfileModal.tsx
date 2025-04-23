@@ -53,6 +53,7 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      // Make sure the photoRemoved flag is properly handled
       await setProfile(tempProfile);
       setNeedsReload(true);
       onOpenChange(false);
@@ -64,6 +65,7 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
   };
 
   const handleRemovePhoto = () => {
+    // Explicitly set photo to undefined to indicate removal
     setTempProfile(prev => ({ ...prev, photo: undefined }));
     if (inputRef.current) inputRef.current.value = "";
   };
@@ -133,7 +135,7 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
                   onChange={handlePhotoUpload}
                 />
               </Button>
-              {tempProfile.photo && (
+              {tempProfile.photo !== undefined && (
                 <Button size="sm" variant="ghost" onClick={handleRemovePhoto}>
                   Rimuovi
                 </Button>
