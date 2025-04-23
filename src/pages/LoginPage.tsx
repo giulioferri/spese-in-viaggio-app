@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,12 +19,12 @@ export default function LoginPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   
   useEffect(() => {
-    // Separate state for checking auth to prevent redirect loop
+    // Separate state for checking auth to prevent redirect loops
     const checkAuth = async () => {
       try {
         console.log("🔑 LoginPage: Checking if user is already logged in", user?.email);
         
-        // Controlla se ci sono parametri nell'URL che indicano un errore di reindirizzamento
+        // Check for errors in URL parameters from OAuth redirects
         const urlParams = new URLSearchParams(window.location.search);
         const error = urlParams.get('error');
         const errorDescription = urlParams.get('error_description');
@@ -39,9 +38,10 @@ export default function LoginPage() {
           });
         }
         
+        // If user is authenticated, redirect to home page
         if (user) {
           console.log("🔑 LoginPage: User already logged in, redirecting to home");
-          navigate("/");
+          navigate("/", { replace: true });
         }
       } catch (err) {
         console.error("🔑 LoginPage: Error checking authentication", err);
@@ -62,6 +62,7 @@ export default function LoginPage() {
     try {
       if (activeTab === "login") {
         await signIn(email, password);
+        // Don't navigate here - wait for auth state change to happen through listener
       } else {
         await signUp(email, password);
       }
@@ -92,7 +93,7 @@ export default function LoginPage() {
   };
 
   // Show loading state while checking authentication
-  if (checkingAuth) {
+  if (checkingAuth || isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-secondary/20">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

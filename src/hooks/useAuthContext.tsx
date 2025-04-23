@@ -26,20 +26,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         (event, newSession) => {
           console.log(`🔑 AuthProvider: Auth state changed: ${event}`, newSession?.user?.email);
           
-          // Handle state changes safely
-          if (event === 'SIGNED_OUT') {
-            setSession(null);
-            setUser(null);
-            console.log("🔑 AuthProvider: User signed out");
-          } else {
-            setSession(newSession);
-            setUser(newSession?.user ?? null);
+          // Always update state synchronously to prevent infinite loops
+          setSession(newSession);
+          setUser(newSession?.user ?? null);
             
-            if (event === 'SIGNED_IN') {
-              console.log("🔑 AuthProvider: User signed in", newSession?.user?.email);
-            } else if (event === 'USER_UPDATED') {
-              console.log("🔑 AuthProvider: User updated");
-            }
+          if (event === 'SIGNED_IN') {
+            console.log("🔑 AuthProvider: User signed in", newSession?.user?.email);
+          } else if (event === 'SIGNED_OUT') {
+            console.log("🔑 AuthProvider: User signed out");
+          } else if (event === 'USER_UPDATED') {
+            console.log("🔑 AuthProvider: User updated");
+          } else if (event === 'TOKEN_REFRESHED') {
+            console.log("🔑 AuthProvider: Token refreshed");
           }
         }
       );
