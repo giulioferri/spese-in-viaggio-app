@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -45,11 +46,11 @@ export function useProfile() {
     async function loadProfile() {
       setIsLoading(true);
       try {
-        // Retrieve profile from the "profiles" table
+        // Using raw query since the profiles table isn't in the TypeScript types yet
         const { data, error } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", userId)
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
           .single();
 
         if (error && error.code !== "PGRST116") {
@@ -68,7 +69,7 @@ export function useProfile() {
           // If the profile doesn't exist yet, create a new one
           const localProfile = getStoredProfile();
           const { error: createError } = await supabase
-            .from("profiles")
+            .from('profiles')
             .insert({
               id: userId,
               photo: localProfile.photo,
@@ -141,7 +142,7 @@ export function useProfile() {
     // Update/create record in the "profiles" table
     try {
       const { error: updateError } = await supabase
-        .from("profiles")
+        .from('profiles')
         .upsert({
           id: userId,
           photo: photoUrl,
