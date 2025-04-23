@@ -46,7 +46,7 @@ export default function Layout() {
               to="/"
               className={cn(
                 buttonVariants({ variant: "ghost", size: "sm" }),
-                "text-white hover:text-white/90"
+                "text-white hover:bg-white/20 hover:text-[#333333]"
               )}
             >
               Home
@@ -55,7 +55,7 @@ export default function Layout() {
               to="/summary"
               className={cn(
                 buttonVariants({ variant: "ghost", size: "sm" }),
-                "text-white hover:text-white/90"
+                "text-white hover:bg-white/20 hover:text-[#333333]"
               )}
             >
               Riepilogo
@@ -83,7 +83,7 @@ export default function Layout() {
               variant="secondary" 
               size="sm" 
               onClick={handleSignOut}
-              className="text-primary hover:text-primary"
+              className="text-primary hover:text-primary hover:bg-white/20"
             >
               Esci
             </Button>
