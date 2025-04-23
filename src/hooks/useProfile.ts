@@ -47,7 +47,7 @@ export function useProfile() {
       setIsLoading(true);
       try {
         // Using raw query since the profiles table isn't in the TypeScript types yet
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('profiles')
           .select('*')
           .eq('id', userId)
@@ -68,7 +68,7 @@ export function useProfile() {
         } else {
           // If the profile doesn't exist yet, create a new one
           const localProfile = getStoredProfile();
-          const { error: createError } = await supabase
+          const { error: createError } = await (supabase as any)
             .from('profiles')
             .insert({
               id: userId,
@@ -141,7 +141,7 @@ export function useProfile() {
 
     // Update/create record in the "profiles" table
     try {
-      const { error: updateError } = await supabase
+      const { error: updateError } = await (supabase as any)
         .from('profiles')
         .upsert({
           id: userId,
