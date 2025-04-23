@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Expense {
@@ -23,10 +22,12 @@ export const getTrips = async (): Promise<Trip[]> => {
     .from('trips')
     .select('id, location, date, expenses:expenses(id, amount, comment, photo_url, photo_path, timestamp)')
     .order('date', { ascending: false });
+
   if (tripsError) {
     console.error("Errore nel recupero trasferte:", tripsError);
     return [];
   }
+
   return (tripsData || []).map((trip: any) => ({
     ...trip,
     expenses: (trip.expenses || []).map((exp: any) => ({
@@ -38,6 +39,30 @@ export const getTrips = async (): Promise<Trip[]> => {
       timestamp: typeof exp.timestamp === "string" ? new Date(exp.timestamp).getTime() : exp.timestamp
     }))
   }));
+};
+
+// Get a single trip and its expenses
+export const getTrip = async (location: string, date: string): Promise<Trip | undefined> => {
+  const { data: trip, error } = await supabase
+    .from('trips')
+    .select('id, location, date, expenses:expenses(id, amount, comment, photo_url, photo_path, timestamp)')
+    .eq('location', location)
+    .eq('date', date)
+    .maybeSingle();
+
+  if (error || !trip) return undefined;
+
+  return {
+    ...trip,
+    expenses: (trip.expenses || []).map((exp: any) => ({
+      id: exp.id,
+      amount: Number(exp.amount),
+      comment: exp.comment || "",
+      photoUrl: exp.photo_url,
+      photoPath: exp.photo_path,
+      timestamp: typeof exp.timestamp === "string" ? new Date(exp.timestamp).getTime() : exp.timestamp
+    })),
+  };
 };
 
 // Save a trip (insert or update if exists)
@@ -58,28 +83,6 @@ export const saveTrip = async (trip: Omit<Trip, "expenses">): Promise<string | n
     return null;
   }
   return data?.id || null;
-};
-
-// Get a single trip and its expenses
-export const getTrip = async (location: string, date: string): Promise<Trip | undefined> => {
-  const { data: trip, error } = await supabase
-    .from('trips')
-    .select('id, location, date, expenses:expenses(id, amount, comment, photo_url, photo_path, timestamp)')
-    .eq('location', location)
-    .eq('date', date)
-    .maybeSingle();
-  if (error || !trip) return undefined;
-  return {
-    ...trip,
-    expenses: (trip.expenses || []).map((exp: any) => ({
-      id: exp.id,
-      amount: Number(exp.amount),
-      comment: exp.comment || "",
-      photoUrl: exp.photo_url,
-      photoPath: exp.photo_path,
-      timestamp: typeof exp.timestamp === "string" ? new Date(exp.timestamp).getTime() : exp.timestamp
-    })),
-  };
 };
 
 // Add an expense to a trip
@@ -172,5 +175,3 @@ export const deleteTrip = async (location: string, date: string): Promise<void> 
   // Remove trip (will cascade and delete all expenses)
   await supabase.from('trips').delete().match({ location, date });
 };
-
-// Not used: getTrips already fetches expenses in one query
