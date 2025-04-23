@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { debugQuery } from "./tripStorageDebug";
 
 export interface Expense {
   id: string;
@@ -16,6 +17,14 @@ export interface Trip {
   expenses: Expense[];
 }
 
+export interface QueryDebugInfo {
+  query?: string;
+  params?: any;
+  results?: any;
+  error?: any;
+  userId?: string;
+}
+
 // Utility per validare l'autenticazione
 const validateAuth = async () => {
   const { data } = await supabase.auth.getSession();
@@ -28,26 +37,32 @@ const validateAuth = async () => {
 };
 
 // Fetch all trips (with expenses)
-export const getTrips = async (): Promise<Trip[]> => {
+export const getTrips = async (): Promise<[Trip[], QueryDebugInfo]> => {
   try {
     // Verifica autenticazione
     await validateAuth();
     
-    // RLS garantirà che vengano restituiti solo i trip dell'utente autenticato
-    const { data: tripsData, error: tripsError } = await supabase
-      .from('trips')
-      .select('id, location, date, expenses:expenses(id, amount, comment, photo_url, photo_path, timestamp)')
-      .order('date', { ascending: false });
-
-    if (tripsError) {
-      console.error("Errore nel recupero trasferte:", tripsError);
-      return [];
+    // Debug informazioni
+    const debugInfo = await debugQuery(
+      "SELECT * FROM trips + SELECT * FROM expenses PER TRIP", 
+      async () => {
+        // RLS garantirà che vengano restituiti solo i trip dell'utente autenticato
+        return await supabase
+          .from('trips')
+          .select('id, location, date, user_id, expenses:expenses(id, amount, comment, photo_url, photo_path, timestamp)')
+          .order('date', { ascending: false });
+      }
+    );
+    
+    if (debugInfo.error) {
+      console.error("Errore nel recupero trasferte:", debugInfo.error);
+      return [[], debugInfo];
     }
 
     // Log per debug: verificare quali dati vengono restituiti
-    console.log("Dati trasferte recuperati:", tripsData ? tripsData.length : 0, "trasferte");
+    console.log("Dati trasferte recuperati:", debugInfo.results ? debugInfo.results.length : 0, "trasferte");
     
-    return (tripsData || []).map((trip: any) => ({
+    const trips = (debugInfo.results || []).map((trip: any) => ({
       ...trip,
       expenses: (trip.expenses || []).map((exp: any) => ({
         id: exp.id,
@@ -58,39 +73,53 @@ export const getTrips = async (): Promise<Trip[]> => {
         timestamp: typeof exp.timestamp === "string" ? new Date(exp.timestamp).getTime() : exp.timestamp
       }))
     }));
+
+    return [trips, debugInfo];
   } catch (err) {
     console.error("Errore durante il recupero delle trasferte:", err);
-    return [];
+    return [[], { error: String(err) }];
   }
 };
 
 // Get a single trip and its expenses
-export const getTrip = async (location: string, date: string): Promise<Trip | undefined> => {
+export const getTrip = async (location: string, date: string): Promise<[Trip | undefined, QueryDebugInfo]> => {
   try {
     // Verifica autenticazione
-    await validateAuth();
+    const session = await validateAuth();
     
-    // RLS garantirà che vengano restituiti solo i trip dell'utente autenticato
-    const { data: trip, error } = await supabase
-      .from('trips')
-      .select('id, location, date, expenses:expenses(id, amount, comment, photo_url, photo_path, timestamp)')
-      .eq('location', location)
-      .eq('date', date)
-      .maybeSingle();
-
-    if (error) {
-      console.error("Errore nel recupero trasferta:", error);
-      return undefined;
+    // Debug informazioni
+    const debugInfo = await debugQuery(
+      `SELECT * FROM trips WHERE location='${location}' AND date='${date}'`, 
+      async () => {
+        // RLS garantirà che vengano restituiti solo i trip dell'utente autenticato
+        return await supabase
+          .from('trips')
+          .select('id, location, date, user_id, expenses:expenses(id, amount, comment, photo_url, photo_path, timestamp)')
+          .eq('location', location)
+          .eq('date', date)
+          .maybeSingle();
+      }
+    );
+    
+    if (debugInfo.error) {
+      console.error("Errore nel recupero trasferta:", debugInfo.error);
+      return [undefined, debugInfo];
     }
     
-    if (!trip) return undefined;
+    if (!debugInfo.results) return [undefined, debugInfo];
 
     // Log per debug: verificare i dettagli della trasferta recuperata
-    console.log("Dettagli trasferta recuperata:", trip.id, trip.location, trip.date);
+    console.log("Dettagli trasferta recuperata:", 
+      debugInfo.results.id, 
+      debugInfo.results.location, 
+      debugInfo.results.date,
+      "User ID:", debugInfo.results.user_id,
+      "Session User ID:", session.user.id
+    );
 
-    return {
-      ...trip,
-      expenses: (trip.expenses || []).map((exp: any) => ({
+    const trip = {
+      ...debugInfo.results,
+      expenses: (debugInfo.results.expenses || []).map((exp: any) => ({
         id: exp.id,
         amount: Number(exp.amount),
         comment: exp.comment || "",
@@ -99,42 +128,50 @@ export const getTrip = async (location: string, date: string): Promise<Trip | un
         timestamp: typeof exp.timestamp === "string" ? new Date(exp.timestamp).getTime() : exp.timestamp
       })),
     };
+
+    return [trip, debugInfo];
   } catch (err) {
     console.error("Errore durante il recupero della trasferta:", err);
-    return undefined;
+    return [undefined, { error: String(err) }];
   }
 };
 
 // Save a trip (insert or update if exists)
-export const saveTrip = async (trip: Omit<Trip, "expenses">): Promise<string | null> => {
+export const saveTrip = async (trip: Omit<Trip, "expenses">): Promise<[string | null, QueryDebugInfo]> => {
   try {
     // Verifica autenticazione
     await validateAuth();
     
-    // Il trigger set_user_id_on_trip_insert imposterà automaticamente user_id
-    const { data, error } = await supabase
-      .from('trips')
-      .upsert({
-        id: trip.id,
-        location: trip.location,
-        date: trip.date, // ISO "yyyy-MM-dd"
-        // Non specificare user_id qui, il trigger lo imposterà automaticamente
-      }, { onConflict: "location,date" })
-      .select()
-      .maybeSingle();
+    // Debug informazioni
+    const debugInfo = await debugQuery(
+      `UPSERT INTO trips (id, location, date) VALUES ('${trip.id || "new"}', '${trip.location}', '${trip.date}')`, 
+      async () => {
+        // Il trigger set_user_id_on_trip_insert imposterà automaticamente user_id
+        return await supabase
+          .from('trips')
+          .upsert({
+            id: trip.id,
+            location: trip.location,
+            date: trip.date, // ISO "yyyy-MM-dd"
+            // Non specificare user_id qui, il trigger lo imposterà automaticamente
+          }, { onConflict: "location,date" })
+          .select()
+          .maybeSingle();
+      }
+    );
     
-    if (error) {
-      console.error("Errore salvataggio trasferta:", error);
-      return null;
+    if (debugInfo.error) {
+      console.error("Errore salvataggio trasferta:", debugInfo.error);
+      return [null, debugInfo];
     }
 
     // Log per debug
-    console.log("Trasferta salvata con ID:", data?.id);
+    console.log("Trasferta salvata con ID:", debugInfo.results?.id);
     
-    return data?.id || null;
+    return [debugInfo.results?.id || null, debugInfo];
   } catch (err) {
     console.error("Errore durante il salvataggio della trasferta:", err);
-    return null;
+    return [null, { error: String(err) }];
   }
 };
 
@@ -143,17 +180,17 @@ export const addExpense = async (
   location: string,
   date: string,
   expense: Expense
-): Promise<void> => {
+): Promise<[void, QueryDebugInfo]> => {
   try {
     // Verifica autenticazione
     await validateAuth();
 
     // Step 1: Ensure trip exists/get id
-    let trip = await getTrip(location, date);
+    let [trip, tripDebugInfo] = await getTrip(location, date);
     let tripId = trip?.id;
     if (!trip) {
       // Insert trip if not exists
-      const newTripId = await saveTrip({
+      const [newTripId, saveDebugInfo] = await saveTrip({
         id: undefined as any,
         location,
         date
@@ -163,33 +200,41 @@ export const addExpense = async (
     
     // Step 2: Add expense
     if (!tripId) {
-      throw new Error("Impossibile salvare la spesa: nessuna trasferta trovata");
+      const error = "Impossibile salvare la spesa: nessuna trasferta trovata";
+      return [undefined, { error }];
     }
     
-    // Il trigger set_user_id_on_expense_insert imposterà automaticamente user_id
-    const { error } = await supabase
-      .from("expenses")
-      .insert({
-        id: expense.id,
-        amount: expense.amount,
-        comment: expense.comment,
-        photo_url: expense.photoUrl,
-        photo_path: expense.photoPath ?? null,
-        timestamp: new Date(expense.timestamp).toISOString(),
-        trip_id: tripId
-        // Non specificare user_id qui, il trigger lo imposterà automaticamente
-      });
+    // Debug informazioni
+    const debugInfo = await debugQuery(
+      `INSERT INTO expenses (id, amount, comment, photo_url, trip_id) VALUES (...)`, 
+      async () => {
+        // Il trigger set_user_id_on_expense_insert imposterà automaticamente user_id
+        return await supabase
+          .from("expenses")
+          .insert({
+            id: expense.id,
+            amount: expense.amount,
+            comment: expense.comment,
+            photo_url: expense.photoUrl,
+            photo_path: expense.photoPath ?? null,
+            timestamp: new Date(expense.timestamp).toISOString(),
+            trip_id: tripId
+            // Non specificare user_id qui, il trigger lo imposterà automaticamente
+          });
+      }
+    );
 
-    if (error) {
-      console.error("Errore salvataggio spesa:", error);
-      throw new Error(`Errore nel salvare la spesa: ${error.message}`);
+    if (debugInfo.error) {
+      console.error("Errore salvataggio spesa:", debugInfo.error);
+      throw new Error(`Errore nel salvare la spesa: ${debugInfo.error}`);
     }
 
     // Log per debug
     console.log("Spesa aggiunta con ID:", expense.id, "alla trasferta:", tripId);
+    return [undefined, debugInfo];
   } catch (err) {
     console.error("Errore durante il salvataggio della spesa:", err);
-    throw err;
+    return [undefined, { error: String(err) }];
   }
 };
 
@@ -198,30 +243,40 @@ export const removeExpense = async (
   location: string,
   date: string,
   expenseId: string
-): Promise<void> => {
+): Promise<[void, QueryDebugInfo]> => {
   try {
     // Verifica autenticazione
     await validateAuth();
 
-    const trip = await getTrip(location, date);
-    if (!trip) return;
+    const [trip] = await getTrip(location, date);
+    if (!trip) return [undefined, { error: "Trasferta non trovata" }];
+    
     const exp = trip.expenses.find(e => e.id === expenseId);
     if (exp && exp.photoPath) {
       // Remove from storage
       await supabase.storage.from("expense_photos").remove([exp.photoPath]);
     }
-    // Remove from db - RLS garantirà che solo l'utente proprietario possa eliminare
-    const { error } = await supabase.from("expenses").delete().eq("id", expenseId);
     
-    if (error) {
-      console.error("Errore eliminazione spesa:", error);
-      throw new Error(`Errore nell'eliminare la spesa: ${error.message}`);
+    // Debug informazioni
+    const debugInfo = await debugQuery(
+      `DELETE FROM expenses WHERE id = '${expenseId}'`, 
+      async () => {
+        // Remove from db - RLS garantirà che solo l'utente proprietario possa eliminare
+        return await supabase.from("expenses").delete().eq("id", expenseId);
+      }
+    );
+    
+    if (debugInfo.error) {
+      console.error("Errore eliminazione spesa:", debugInfo.error);
+      throw new Error(`Errore nell'eliminare la spesa: ${debugInfo.error}`);
     }
     
     // Log per debug
     console.log("Spesa rimossa:", expenseId);
+    return [undefined, debugInfo];
   } catch (err) {
     console.error("Errore durante l'eliminazione della spesa:", err);
+    return [undefined, { error: String(err) }];
   }
 };
 
@@ -252,25 +307,36 @@ export const removeTripPhotos = async (trip: Trip) => {
 };
 
 // Delete a whole trip and all related expenses/photos
-export const deleteTrip = async (location: string, date: string): Promise<void> => {
+export const deleteTrip = async (location: string, date: string): Promise<[void, QueryDebugInfo]> => {
   try {
     // Verifica autenticazione
     await validateAuth();
 
-    const trip = await getTrip(location, date);
-    if (!trip) return;
+    const [trip] = await getTrip(location, date);
+    if (!trip) return [undefined, { error: "Trasferta non trovata" }];
+    
     // Remove photos of all expenses
     await removeTripPhotos(trip);
-    // Remove trip (will cascade and delete all expenses) - RLS garantirà che solo l'utente proprietario possa eliminare
-    const { error } = await supabase.from('trips').delete().match({ location, date });
     
-    if (error) {
-      console.error("Errore eliminazione trasferta:", error);
-      throw new Error(`Errore nell'eliminare la trasferta: ${error.message}`);
+    // Debug informazioni
+    const debugInfo = await debugQuery(
+      `DELETE FROM trips WHERE location = '${location}' AND date = '${date}'`, 
+      async () => {
+        // Remove trip (will cascade and delete all expenses) - RLS garantirà che solo l'utente proprietario possa eliminare
+        return await supabase.from('trips').delete().match({ location, date });
+      }
+    );
+    
+    if (debugInfo.error) {
+      console.error("Errore eliminazione trasferta:", debugInfo.error);
+      throw new Error(`Errore nell'eliminare la trasferta: ${debugInfo.error}`);
     } else {
       console.log("Trasferta eliminata:", location, date);
     }
+    
+    return [undefined, debugInfo];
   } catch (err) {
     console.error("Errore durante l'eliminazione della trasferta:", err);
+    return [undefined, { error: String(err) }];
   }
 };

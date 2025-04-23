@@ -7,15 +7,19 @@ import LocationInput from "@/components/LocationInput";
 import ExpenseForm from "@/components/ExpenseForm";
 import ExpenseList from "@/components/ExpenseList";
 import TripSelector from "@/components/TripSelector";
-import { getTrip, getCurrentTrip, setCurrentTrip } from "@/lib/tripStorage";
+import { getTrip, getCurrentTrip, setCurrentTrip, QueryDebugInfo } from "@/lib/tripStorage";
 import { it } from "date-fns/locale";
+import QueryDebug from "@/components/QueryDebug";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Index() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [location, setLocation] = useState("");
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [queryDebugInfo, setQueryDebugInfo] = useState<QueryDebugInfo | null>(null);
 
   useEffect(() => {
     const initializeTrip = async () => {
@@ -25,14 +29,16 @@ export default function Index() {
         if (currentTrip) {
           setLocation(currentTrip.location);
           setDate(currentTrip.date);
-          const tripData = await getTrip(currentTrip.location, currentTrip.date);
+          const [tripData, debugInfo] = await getTrip(currentTrip.location, currentTrip.date);
           setExpenses(tripData?.expenses || []);
+          setQueryDebugInfo(debugInfo);
         } else {
           const today = format(new Date(), "yyyy-MM-dd");
           setDate(today);
         }
       } catch (error) {
         console.error("Error initializing trip:", error);
+        setQueryDebugInfo({ error: String(error) });
       } finally {
         setLoading(false);
       }
@@ -56,16 +62,17 @@ export default function Index() {
   };
 
   const loadExpenses = async (tripLocation: string, tripDate: string) => {
-    const tripData = await getTrip(tripLocation, tripDate);
+    const [tripData, debugInfo] = await getTrip(tripLocation, tripDate);
     setExpenses(tripData?.expenses || []);
+    setQueryDebugInfo(debugInfo);
   };
 
-  const handleExpenseAdded = () => {
-    loadExpenses(location, date);
+  const handleExpenseAdded = async () => {
+    await loadExpenses(location, date);
   };
 
-  const handleExpenseRemoved = () => {
-    loadExpenses(location, date);
+  const handleExpenseRemoved = async () => {
+    await loadExpenses(location, date);
   };
 
   if (loading) {
@@ -80,7 +87,14 @@ export default function Index() {
     <div className="space-y-6">
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle>Dettagli Trasferta</CardTitle>
+          <CardTitle className="text-lg flex justify-between items-center">
+            <span>Dettagli Trasferta</span>
+            {user && (
+              <span className="text-sm text-muted-foreground">
+                Utente: {user.email} (ID: {user.id.substring(0, 8)}...)
+              </span>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -104,6 +118,9 @@ export default function Index() {
           />
         </CardContent>
       </Card>
+
+      {/* Informazioni di debug sulle query */}
+      {queryDebugInfo && <QueryDebug queryInfo={queryDebugInfo} />}
 
       {location && date && (
         <>

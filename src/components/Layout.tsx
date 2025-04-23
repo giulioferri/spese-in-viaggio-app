@@ -52,6 +52,11 @@ export default function Layout() {
             >
               Diagnosi
             </Link>
+            {user && (
+              <span className="text-xs text-muted-foreground">
+                {user.email?.substring(0, 15)}...
+              </span>
+            )}
             <Button variant="outline" size="sm" onClick={handleSignOut}>
               Esci
             </Button>

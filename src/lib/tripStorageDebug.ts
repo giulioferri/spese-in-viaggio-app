@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 
@@ -64,7 +63,10 @@ export const debugRlsPolicies = async () => {
       success: true, 
       totalTrips: totaleTrips,
       userTrips: trovatiTripsFiltrati,
-      problemiUserIds: problemiUserIds.length
+      problemiUserIds: problemiUserIds.length,
+      allTripsData,
+      userTripsData,
+      currentUserId
     };
     
   } catch (err) {
@@ -95,5 +97,26 @@ export const fixOrphanedData = async () => {
   } catch (err) {
     console.error("General error fixing data:", err);
     return { success: false, error: String(err) };
+  }
+};
+
+export const debugQuery = async (queryDescription: string, queryFn: () => Promise<any>) => {
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData.session?.user?.id;
+    
+    const result = await queryFn();
+    
+    return {
+      query: queryDescription,
+      results: result.data,
+      error: result.error,
+      userId
+    };
+  } catch (err) {
+    return {
+      query: queryDescription,
+      error: String(err)
+    };
   }
 };
