@@ -36,7 +36,10 @@ export function getOrCreateUserId(): string {
     if (userId && uuidPattern.test(userId)) {
       return userId;
     }
+    
+    // Generate a new UUID if none exists or it's invalid
     userId = crypto.randomUUID();
+    console.log("Generated new UUID for user:", userId);
     localStorage.setItem('anonymous_user_id', userId);
     return userId;
   } catch (e) {

@@ -20,7 +20,7 @@ export function useProfile() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Now the user ID is always UUID
+  // Ora l'ID utente è sempre un UUID
   const userId = getOrCreateUserId();
   const { toast } = useToast();
 
@@ -30,7 +30,7 @@ export function useProfile() {
       try {
         const localProfile = getStoredProfile();
 
-        // Adjust for UUID ID
+        // Fetch profile from Supabase using UUID
         const { data, error } = await supabase
           .from("profiles")
           .select("*")
@@ -39,9 +39,11 @@ export function useProfile() {
 
         if (error && error.code !== "PGRST116") {
           console.error("Error loading profile:", error);
+          setError(`Error loading profile: ${error.message}`);
         }
 
         if (data) {
+          console.log("Profile loaded from Supabase:", data);
           const supabaseProfile: UserProfile = {
             id: data.id,
             photo: data.photo ?? undefined,
@@ -50,7 +52,8 @@ export function useProfile() {
           setProfileState(supabaseProfile);
           localStorage.setItem(PROFILE_KEY, JSON.stringify(supabaseProfile));
         } else {
-          // If not exists, create a new profile (with valid UUID userId)
+          console.log("No profile found, creating new one with ID:", userId);
+          // Create a new profile if none exists
           const { error: upsertError } = await supabase.from("profiles").upsert({
             id: userId,
             photo: localProfile.photo,
@@ -59,23 +62,23 @@ export function useProfile() {
 
           if (upsertError) {
             console.error("Error creating profile:", upsertError);
+            setError(`Error creating profile: ${upsertError.message}`);
           } else {
+            console.log("New profile created successfully");
             setProfileState({ ...localProfile, id: userId });
             localStorage.setItem(PROFILE_KEY, JSON.stringify({ ...localProfile, id: userId }));
           }
         }
       } catch (err) {
         console.error("Unexpected error:", err);
-        // Don't show the error toast - just log it
+        setError(`Unexpected error: ${String(err)}`);
       } finally {
         setIsLoading(false);
       }
     }
     loadProfile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
-  // Save/update profiles as UUID everywhere
   const setProfile = async (updater: UserProfile | ((p: UserProfile) => UserProfile)) => {
     try {
       const currProfile = profile;
@@ -89,6 +92,7 @@ export function useProfile() {
       // Upload avatar if data URL
       if (photoUrl && photoUrl.startsWith("data:image")) {
         try {
+          console.log("Uploading profile photo...");
           const base64Data = photoUrl.split(",")[1];
           const fileType = photoUrl.split(";")[0].split(":")[1];
           const extension = fileType.split("/")[1];
@@ -105,22 +109,44 @@ export function useProfile() {
 
           if (uploadError && uploadError.message !== "The resource already exists") {
             console.error("Error uploading photo:", uploadError);
+            toast({
+              title: "Errore",
+              description: `Errore durante il caricamento della foto: ${uploadError.message}`,
+              variant: "destructive",
+            });
           } else {
+            console.log("Photo uploaded successfully");
             const { data: urlData } = supabase.storage
               .from("profile_photos")
               .getPublicUrl(fileName);
             if (urlData?.publicUrl) {
               photoUrl = `${urlData.publicUrl}?t=${new Date().getTime()}`;
+              console.log("Photo public URL:", photoUrl);
             }
           }
         } catch (err) {
           console.error("Avatar upload error:", err);
+          toast({
+            title: "Errore",
+            description: "Errore durante il caricamento della foto",
+            variant: "destructive",
+          });
         }
+      } else if (photoUrl === undefined) {
+        console.log("Removing profile photo");
+      } else {
+        console.log("Using existing photo URL:", photoUrl);
       }
 
       try {
         const validatedPalette = validatePalette(updatedProfile.palette);
         const photoValue = photoUrl === undefined ? null : photoUrl;
+
+        console.log("Saving profile to Supabase:", {
+          id: userId,
+          photo: photoValue,
+          palette: validatedPalette
+        });
 
         const { error: updateError } = await supabase
           .from("profiles")
@@ -139,6 +165,7 @@ export function useProfile() {
             variant: "destructive",
           });
         } else {
+          console.log("Profile updated successfully in Supabase");
           const validatedProfile: UserProfile = { 
             ...updatedProfile, 
             photo: photoUrl,

@@ -1,6 +1,6 @@
 
 import { useRef, useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useProfile } from "@/hooks/useProfile";
@@ -25,8 +25,10 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
   const [needsReload, setNeedsReload] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Sincronizza tempProfile quando profile cambia o la modale si apre
   useEffect(() => {
     if (open) {
+      console.log("ProfileModal opened, setting tempProfile to:", profile);
       setTempProfile(profile);
       setNeedsReload(false);
     } else if (needsReload) {
@@ -38,24 +40,33 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      console.log("Photo selected:", file.name, file.type);
       const reader = new FileReader();
       reader.onload = ev => {
-        setTempProfile(prev => ({ ...prev, photo: ev.target?.result as string }));
+        if (ev.target?.result) {
+          console.log("Photo loaded as data URL");
+          setTempProfile(prev => ({ ...prev, photo: ev.target?.result as string }));
+        }
       };
       reader.readAsDataURL(file);
     }
   };
 
   const handlePaletteSelect = (value: "default" | "green" | "red") => {
+    console.log("Palette selected:", value);
     setTempProfile(prev => ({ ...prev, palette: value }));
   };
 
   const handleSave = async () => {
     setIsSaving(true);
+    console.log("Saving profile:", tempProfile);
     try {
-      // Make sure the photoRemoved flag is properly handled
-      await setProfile(tempProfile);
-      setNeedsReload(true);
+      // Salva le modifiche al profilo
+      const success = await setProfile(tempProfile);
+      if (success) {
+        console.log("Profile saved successfully, setting needsReload");
+        setNeedsReload(true);
+      }
       onOpenChange(false);
     } catch (err) {
       console.error("Error saving profile:", err);
@@ -65,7 +76,8 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
   };
 
   const handleRemovePhoto = () => {
-    // Explicitly set photo to undefined to indicate removal
+    console.log("Photo removed");
+    // Imposta esplicitamente photo a undefined per indicare la rimozione
     setTempProfile(prev => ({ ...prev, photo: undefined }));
     if (inputRef.current) inputRef.current.value = "";
   };
@@ -105,6 +117,7 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
     <Dialog open={open} onOpenChange={(isOpen) => {
       if (!isOpen && needsReload) {
         // Se la modale viene chiusa dopo un salvataggio, attendi un momento e ricarica
+        console.log("Dialog closing with needsReload=true, will reload page");
         setTimeout(() => window.location.reload(), 100);
       }
       onOpenChange(isOpen);
