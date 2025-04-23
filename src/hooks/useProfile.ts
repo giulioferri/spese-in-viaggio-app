@@ -1,6 +1,5 @@
-
 import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
 
 // Simple profile shape
 export type UserProfile = {
@@ -8,20 +7,6 @@ export type UserProfile = {
   photo?: string; // URL
   palette: "default" | "green" | "red";
 };
-
-// Create Supabase client with proper error handling for environment variables
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-// Check if environment variables are available
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error("Supabase environment variables are missing. Please make sure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set.");
-}
-
-// Initialize Supabase with fallback for development
-const supabase = supabaseUrl && supabaseAnonKey
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
 
 const PROFILE_KEY = "spese-trasferta-profile";
 
@@ -60,14 +45,7 @@ export function useProfile() {
     async function loadProfile() {
       setIsLoading(true);
       try {
-        // Usa sempre Supabase se disponibile
-        if (!supabase) {
-          setProfileState(getStoredProfile());
-          setIsLoading(false);
-          return;
-        }
-
-        // Recupera profilo dalla tabella "profiles"
+        // Retrieve profile from the "profiles" table
         const { data, error } = await supabase
           .from("profiles")
           .select("*")
@@ -87,7 +65,7 @@ export function useProfile() {
           setProfileState(supabaseProfile);
           localStorage.setItem(PROFILE_KEY, JSON.stringify(supabaseProfile)); // Sync fallback
         } else {
-          // Se non esiste ancora, crea un nuovo profilo
+          // If the profile doesn't exist yet, create a new one
           const localProfile = getStoredProfile();
           const { error: createError } = await supabase
             .from("profiles")
@@ -119,10 +97,8 @@ export function useProfile() {
     setProfileState(updatedProfile);
     localStorage.setItem(PROFILE_KEY, JSON.stringify(updatedProfile));
 
-    if (!supabase) return;
-
     let photoUrl = updatedProfile.photo;
-    // Carica in Supabase Storage se è una data URL
+    // Upload to Supabase Storage if it's a data URL
     if (photoUrl && photoUrl.startsWith("data:image")) {
       try {
         const base64Data = photoUrl.split(",")[1];
@@ -136,21 +112,19 @@ export function useProfile() {
         const blob = new Blob([new Uint8Array(byteArrays)], { type: fileType });
         const fileName = `avatar-${userId}.${extension}`;
 
-        // Carica la foto sul bucket "profile_photos"
+        // Upload the photo to the "profile_photos" bucket
         const { error: uploadError } = await supabase.storage
           .from("profile_photos")
           .upload(fileName, blob, { cacheControl: "3600", upsert: true });
 
-        // Correggiamo qui la verifica dell'errore rimuovendo la verifica di statusCode
+        // Check for errors other than "resource already exists"
         if (uploadError) {
-          // Verifica se l'errore è diverso dal conflitto (409)
-          // Il nome dell'errore o un messaggio specifico può essere controllato al posto del codice di stato
           if (uploadError.message !== 'The resource already exists') {
             throw new Error(`Errore durante il caricamento della foto: ${uploadError.message}`);
           }
         }
 
-        // Ottieni l'URL pubblico
+        // Get the public URL
         const { data: urlData } = supabase.storage
           .from("profile_photos")
           .getPublicUrl(fileName);
@@ -159,12 +133,12 @@ export function useProfile() {
           photoUrl = urlData.publicUrl;
         }
       } catch (err) {
-        // Errore in upload: mantieni solo in localStorage
+        // Error in upload: keep in localStorage only
         console.error("Errore upload avatar:", err);
       }
     }
 
-    // Aggiorna/crea record nella tabella "profiles"
+    // Update/create record in the "profiles" table
     try {
       const { error: updateError } = await supabase
         .from("profiles")
