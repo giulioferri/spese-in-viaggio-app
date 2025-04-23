@@ -1,8 +1,6 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Camera } from "lucide-react";
@@ -177,29 +175,32 @@ export default function ExpenseForm({ location, date, onExpenseAdded }: ExpenseF
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="amount">Importo (€)</Label>
-            <Input
-              id="amount"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0.00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              disabled={isSubmitting}
-            />
-          </div>
+          <div className="grid grid-cols-[1fr,2fr] gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="amount">Importo (€)</Label>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                disabled={isSubmitting}
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="comment">Commento</Label>
-            <Textarea
-              id="comment"
-              placeholder="Descrizione della spesa..."
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              disabled={isSubmitting}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="comment">Commento</Label>
+              <Input
+                id="comment"
+                type="text"
+                placeholder="Descrizione della spesa..."
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                disabled={isSubmitting}
+              />
+            </div>
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
