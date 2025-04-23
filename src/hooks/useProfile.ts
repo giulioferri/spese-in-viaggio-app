@@ -9,29 +9,28 @@ import {
   validatePalette 
 } from "./useProfileUtils";
 
-// Simple profile shape
 export type UserProfile = {
-  id?: string;
-  photo?: string; // URL
+  id?: string; // UUID as string
+  photo?: string;
   palette: "default" | "green" | "red";
 };
 
-// Questo hook fornisce profile, setProfile e funzioni per aggiornarlo
 export function useProfile() {
   const [profile, setProfileState] = useState<UserProfile>(() => getStoredProfile());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Now the user ID is always UUID
   const userId = getOrCreateUserId();
   const { toast } = useToast();
 
-  // Carica il profilo da Supabase quando il componente viene montato
   useEffect(() => {
     async function loadProfile() {
       setIsLoading(true);
       try {
-        // Ensure we have a valid profile from localStorage as fallback
         const localProfile = getStoredProfile();
-        
+
+        // Adjust for UUID ID
         const { data, error } = await supabase
           .from("profiles")
           .select("*")
@@ -40,7 +39,6 @@ export function useProfile() {
 
         if (error && error.code !== "PGRST116") {
           console.error("Error loading profile:", error);
-          // On error, continue with local profile but don't show error to user
         }
 
         if (data) {
@@ -52,7 +50,7 @@ export function useProfile() {
           setProfileState(supabaseProfile);
           localStorage.setItem(PROFILE_KEY, JSON.stringify(supabaseProfile));
         } else {
-          // Se non esiste, creo il nuovo profilo
+          // If not exists, create a new profile (with valid UUID userId)
           const { error: upsertError } = await supabase.from("profiles").upsert({
             id: userId,
             photo: localProfile.photo,
@@ -61,7 +59,6 @@ export function useProfile() {
 
           if (upsertError) {
             console.error("Error creating profile:", upsertError);
-            // Continue with local profile but don't show error to user
           } else {
             setProfileState({ ...localProfile, id: userId });
             localStorage.setItem(PROFILE_KEY, JSON.stringify({ ...localProfile, id: userId }));
@@ -70,7 +67,6 @@ export function useProfile() {
       } catch (err) {
         console.error("Unexpected error:", err);
         // Don't show the error toast - just log it
-        // Continue with the local profile from storage
       } finally {
         setIsLoading(false);
       }
@@ -79,21 +75,18 @@ export function useProfile() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
-  // Salva il profilo su Supabase e localStorage
+  // Save/update profiles as UUID everywhere
   const setProfile = async (updater: UserProfile | ((p: UserProfile) => UserProfile)) => {
     try {
       const currProfile = profile;
       const newProfile = typeof updater === "function" ? updater(currProfile) : updater;
       const updatedProfile: UserProfile = { ...newProfile, id: userId };
 
-      // Update localStorage first to ensure we have a local copy
       setProfileState(updatedProfile);
       localStorage.setItem(PROFILE_KEY, JSON.stringify(updatedProfile));
-
-      // Handle photo explicitly - if undefined, it means we want to remove it
       let photoUrl = updatedProfile.photo;
 
-      // Se la foto profilo è una data URL, effettua upload su Supabase Storage
+      // Upload avatar if data URL
       if (photoUrl && photoUrl.startsWith("data:image")) {
         try {
           const base64Data = photoUrl.split(",")[1];
@@ -106,14 +99,12 @@ export function useProfile() {
           }
           const blob = new Blob([new Uint8Array(byteArrays)], { type: fileType });
           const fileName = `avatar-${userId}.${extension}`;
-
           const { error: uploadError } = await supabase.storage
             .from("profile_photos")
             .upload(fileName, blob, { cacheControl: "3600", upsert: true });
 
           if (uploadError && uploadError.message !== "The resource already exists") {
             console.error("Error uploading photo:", uploadError);
-            // Continue with the data URL instead of showing an error
           } else {
             const { data: urlData } = supabase.storage
               .from("profile_photos")
@@ -123,23 +114,19 @@ export function useProfile() {
             }
           }
         } catch (err) {
-          // Keep the photo in localStorage only in case of error
           console.error("Avatar upload error:", err);
         }
       }
 
-      // Update/create DB record
       try {
         const validatedPalette = validatePalette(updatedProfile.palette);
-
-        // If photo is undefined (removed), explicitly set to null for database
         const photoValue = photoUrl === undefined ? null : photoUrl;
 
         const { error: updateError } = await supabase
           .from("profiles")
           .upsert({
             id: userId,
-            photo: photoValue, // Important: use null instead of undefined for DB
+            photo: photoValue,
             palette: validatedPalette,
             updated_at: new Date().toISOString(),
           });
@@ -154,18 +141,16 @@ export function useProfile() {
         } else {
           const validatedProfile: UserProfile = { 
             ...updatedProfile, 
-            photo: photoUrl, // Keep undefined in the local state if removed
+            photo: photoUrl,
             palette: validatedPalette 
           };
           setProfileState(validatedProfile);
           localStorage.setItem(PROFILE_KEY, JSON.stringify(validatedProfile));
-
           toast({
             title: "Successo",
             description: "Profilo aggiornato con successo",
           });
         }
-
         return true;
       } catch (err) {
         console.error("Profile update error:", err);
