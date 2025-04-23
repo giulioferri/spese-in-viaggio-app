@@ -39,7 +39,8 @@ export default function TripSelector({
   // Load trips on mount
   useEffect(() => {
     const loadTrips = async () => {
-      const loadedTrips = await getTrips();
+      // Destructure the return value to get only the trips array, not the debug info
+      const [loadedTrips, _debugInfo] = await getTrips();
       setTrips(loadedTrips);
       
       // Create a unique ID for the current trip
