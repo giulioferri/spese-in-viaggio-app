@@ -7,10 +7,12 @@ import { useState } from "react";
 import ProfileModal from "./ProfileModal";
 import { useProfile } from "@/hooks/useProfile";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function Layout() {
   const [openProfile, setOpenProfile] = useState(false);
   const { profile, isLoading } = useProfile();
+  const isMobile = useIsMobile();
 
   return (
     <div className="min-h-screen flex flex-col bg-secondary/20">
@@ -45,7 +47,7 @@ export default function Layout() {
       </header>
 
       {/* Main content */}
-      <main className="flex-1 container py-6">
+      <main className={`flex-1 container py-6 ${isMobile ? 'pb-28' : ''}`}>
         <Outlet />
       </main>
       
