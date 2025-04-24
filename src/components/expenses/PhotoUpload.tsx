@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -109,7 +108,6 @@ export function PhotoUpload({ location, date, photoUrl, onPhotoUploaded, disable
               id="photo-upload"
               type="file"
               accept="image/*"
-              capture="environment"
               className="hidden"
               onChange={handlePhotoChange}
               disabled={isUploading || disabled}
