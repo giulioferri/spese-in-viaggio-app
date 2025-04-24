@@ -1,17 +1,18 @@
 
 // Service Worker
-const CACHE_NAME = 'spese-cache-v3';
+const CACHE_NAME = 'spese-cache-v4';
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/lovable-uploads/0.png', // Prima immagine caricata
-  '/lovable-uploads/1.png', // Seconda immagine caricata
-  '/lovable-uploads/2.png', // Terza immagine caricata
-  '/lovable-uploads/3.png', // Quarta immagine caricata
-  '/lovable-uploads/4.png', // Quinta immagine caricata
-  '/lovable-uploads/5.png', // Sesta immagine caricata
-  '/lovable-uploads/6.png'  // Settima immagine caricata
+  // Use directly the uploaded images
+  '/lovable-uploads/0.png',
+  '/lovable-uploads/1.png',
+  '/lovable-uploads/2.png',
+  '/lovable-uploads/3.png',
+  '/lovable-uploads/4.png',
+  '/lovable-uploads/5.png',
+  '/lovable-uploads/6.png'
 ];
 
 // Install event: apre la cache e aggiunge le risorse
@@ -26,6 +27,9 @@ self.addEventListener('install', (event) => {
       .then(() => {
         console.log('Service Worker: Tutte le risorse sono state memorizzate nella cache');
         return self.skipWaiting(); // Forza l'attivazione immediata
+      })
+      .catch(error => {
+        console.error('Service Worker: Errore durante il caching:', error);
       })
   );
 });
@@ -42,6 +46,7 @@ self.addEventListener('activate', (event) => {
             console.log('Service Worker: Eliminazione della vecchia cache', cacheName);
             return caches.delete(cacheName);
           }
+          return Promise.resolve();
         })
       );
     })
@@ -65,15 +70,15 @@ self.addEventListener('fetch', (event) => {
         
         // Altrimenti, recupera dalla rete
         console.log('Service Worker: Risorsa non in cache, recupero da rete:', event.request.url);
-        return fetch(event.request).then(
-          function(response) {
+        return fetch(event.request)
+          .then(function(networkResponse) {
             // Controlla se abbiamo ricevuto una risposta valida
-            if(!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
+            if(!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+              return networkResponse;
             }
 
             // Clona la risposta perché è un flusso che può essere usato solo una volta
-            var responseToCache = response.clone();
+            var responseToCache = networkResponse.clone();
 
             caches.open(CACHE_NAME)
               .then(function(cache) {
@@ -81,13 +86,13 @@ self.addEventListener('fetch', (event) => {
                 console.log('Service Worker: Risorsa aggiunta alla cache:', event.request.url);
               });
 
-            return response;
-          }
-        );
-      })
-      .catch(function(error) {
-        console.log('Service Worker: Errore di fetch:', error);
-        // Puoi restituire una pagina di fallback qui se vuoi
+            return networkResponse;
+          })
+          .catch(error => {
+            console.error('Service Worker: Errore di rete:', error);
+            // Fallback per le risorse che non si possono recuperare
+            return new Response('Risorsa non disponibile offline');
+          });
       })
   );
 });

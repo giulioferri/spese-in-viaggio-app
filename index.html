@@ -12,11 +12,12 @@
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" href="/lovable-uploads/0.png" type="image/png" />
     
-    <!-- iOS Splash Screen -->
-    <link rel="apple-touch-icon" href="/lovable-uploads/0.png" />
+    <!-- iOS and Android PWA meta tags -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Spese" />
+    <link rel="apple-touch-icon" href="/lovable-uploads/0.png" />
     
     <!-- Splash Screen Images -->
     <link rel="apple-touch-startup-image" href="/lovable-uploads/2.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)" />
@@ -25,14 +26,8 @@
     <link rel="apple-touch-startup-image" href="/lovable-uploads/5.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" />
     <link rel="apple-touch-startup-image" href="/lovable-uploads/6.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)" />
 
-    <!-- PWA feature detection -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/sw.js');
-        });
-      }
-    </script>
+    <!-- GPT Engineer script tag -->
+    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
 
     <!-- Open Graph metadata -->
     <meta property="og:title" content="spese-in-viaggio-app" />
@@ -47,7 +42,6 @@
 
   <body>
     <div id="root"></div>
-    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

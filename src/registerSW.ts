@@ -16,13 +16,13 @@ export function registerServiceWorker() {
             installingWorker.onstatechange = () => {
               if (installingWorker.state === 'installed') {
                 if (navigator.serviceWorker.controller) {
-                  // A questo punto, è disponibile un nuovo aggiornamento del service worker
                   console.log('Nuovo contenuto disponibile; aggiorna la pagina.');
                   
-                  // Se vuoi applicare l'aggiornamento automaticamente, puoi farlo qui
-                  // registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                  // Mostra un messaggio all'utente che può aggiornare la pagina
+                  if (window.confirm('Nuova versione disponibile! Vuoi aggiornare la pagina per usare la nuova versione?')) {
+                    window.location.reload();
+                  }
                 } else {
-                  // A questo punto, tutto è stato precachato.
                   console.log('Contenuto nella cache per uso offline.');
                 }
               }
@@ -41,6 +41,8 @@ export function checkForUpdates() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.ready.then(registration => {
       registration.update();
+    }).catch(error => {
+      console.error('Errore durante l\'aggiornamento del SW:', error);
     });
   }
 }
@@ -51,7 +53,10 @@ export function applyUpdate() {
     navigator.serviceWorker.ready.then(registration => {
       if (registration.waiting) {
         registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        window.location.reload();
       }
+    }).catch(error => {
+      console.error('Errore durante l\'applicazione dell\'aggiornamento:', error);
     });
   }
 }
