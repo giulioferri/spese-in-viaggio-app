@@ -1,18 +1,11 @@
 
 // Service Worker
-const CACHE_NAME = 'spese-cache-v5';
+const CACHE_NAME = 'spese-cache-v6';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/manifest.json',
-  // Use directly the uploaded images
-  '/lovable-uploads/0.png',
-  '/lovable-uploads/1.png',
-  '/lovable-uploads/2.png',
-  '/lovable-uploads/3.png',
-  '/lovable-uploads/4.png',
-  '/lovable-uploads/5.png',
-  '/lovable-uploads/6.png'
+  '/manifest.json'
+  // Removed specific image references that might be causing errors
 ];
 
 // Install event: opens the cache and adds resources
@@ -30,6 +23,8 @@ self.addEventListener('install', (event) => {
       })
       .catch(error => {
         console.error('Service Worker: Error during caching:', error);
+        // Continue with activation even if caching fails
+        return self.skipWaiting();
       })
   );
 });
@@ -61,12 +56,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') {
-    return;
-  }
-
-  // Skip cross-origin requests
-  const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin) {
     return;
   }
 
@@ -103,6 +92,16 @@ self.addEventListener('fetch', (event) => {
           // For JS/CSS files that might have versioned names
           if (event.request.url.match(/\.(js|css)$/)) {
             return caches.match('/');
+          }
+          
+          // For image resources that fail to load
+          if (event.request.url.match(/\.(png|jpg|jpeg|gif|webp|svg)$/)) {
+            console.log('Service Worker: Image resource not available:', event.request.url);
+            // Return a transparent image or default placeholder instead
+            return new Response('', {
+              status: 200,
+              headers: {'Content-Type': 'image/png'}
+            });
           }
           
           return new Response('Resource not available offline');

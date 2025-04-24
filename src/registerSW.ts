@@ -31,6 +31,7 @@ export function registerServiceWorker() {
         };
       } catch (error) {
         console.error('Service Worker registration failed:', error);
+        // Continue with the application even if service worker registration fails
       }
     });
   }
