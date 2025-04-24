@@ -2,12 +2,19 @@
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
-import { registerServiceWorker } from './registerSW';
+import { registerServiceWorker, checkForUpdates } from './registerSW';
 
-// Register the service worker to enable PWA functionality
-console.log('Initializing application and registering service worker...');
+// Registrazione del service worker per abilitare le funzionalità PWA
+console.log('Inizializzazione dell\'applicazione e registrazione del service worker...');
 registerServiceWorker();
 
-createRoot(document.getElementById("root")!).render(
-  <App />
-);
+// Creazione dell'elemento root e rendering dell'applicazione
+const root = document.getElementById("root");
+if (root) {
+  createRoot(root).render(<App />);
+} else {
+  console.error("Elemento root non trovato nel DOM");
+}
+
+// Controlla periodicamente gli aggiornamenti del service worker
+setInterval(checkForUpdates, 60 * 60 * 1000); // Controlla ogni ora

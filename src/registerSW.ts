@@ -3,11 +3,11 @@ export function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', async () => {
       try {
-        console.log('Attempting to register service worker...');
+        console.log('Tentativo di registrazione del service worker...');
         const registration = await navigator.serviceWorker.register('/sw.js');
-        console.log('Service Worker registered successfully:', registration.scope);
+        console.log('Service Worker registrato con successo:', registration.scope);
         
-        // Update handling
+        // Gestione aggiornamenti
         registration.onupdatefound = () => {
           const installingWorker = registration.installing;
           if (installingWorker == null) {
@@ -17,54 +17,56 @@ export function registerServiceWorker() {
           installingWorker.onstatechange = () => {
             if (installingWorker.state === 'installed') {
               if (navigator.serviceWorker.controller) {
-                console.log('New content available; refresh the page to use it.');
+                console.log('Nuovo contenuto disponibile; aggiorna la pagina per utilizzarlo.');
                 
-                // Show a message to the user that they can update the page
-                if (window.confirm('New version available! Would you like to refresh the page to use the new version?')) {
+                // Mostra un messaggio all'utente che può aggiornare la pagina
+                if (window.confirm('Nuova versione disponibile! Vuoi aggiornare la pagina per utilizzare la nuova versione?')) {
                   window.location.reload();
                 }
               } else {
-                console.log('Content cached for offline use.');
+                console.log('Contenuto memorizzato nella cache per l\'uso offline.');
               }
             }
           };
         };
       } catch (error) {
-        console.error('Service Worker registration failed:', error);
-        // Continue with the application even if service worker registration fails
+        console.error('Registrazione del Service Worker fallita:', error);
+        // Continua con l'applicazione anche se la registrazione del service worker fallisce
       }
     });
   }
 }
 
-// Helper function to manually update the service worker when available
+// Funzione di supporto per aggiornare manualmente il service worker quando disponibile
 export function checkForUpdates() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.ready.then(registration => {
-      console.log('Checking for Service Worker updates...');
+      console.log('Verifica aggiornamenti Service Worker...');
       registration.update()
-        .then(() => console.log('Service Worker update check completed'))
-        .catch(error => console.error('Error during SW update check:', error));
+        .then(() => console.log('Verifica aggiornamento Service Worker completata'))
+        .catch(error => console.error('Errore durante la verifica aggiornamento SW:', error));
+    }).catch(error => {
+      console.error('Errore durante il controllo degli aggiornamenti:', error);
     });
   }
 }
 
-// Function to force update when a new service worker is available
+// Funzione per forzare l'aggiornamento quando è disponibile un nuovo service worker
 export function applyUpdate() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.ready.then(registration => {
       if (registration.waiting) {
-        console.log('Applying pending Service Worker update...');
+        console.log('Applicazione aggiornamento Service Worker in sospeso...');
         registration.waiting.postMessage({ type: 'SKIP_WAITING' });
         window.location.reload();
       }
     }).catch(error => {
-      console.error('Error applying update:', error);
+      console.error('Errore nell\'applicare l\'aggiornamento:', error);
     });
   }
 }
 
-// Check if the app is installed as PWA
+// Verifica se l'app è installata come PWA
 export function isPWA() {
   return window.matchMedia('(display-mode: standalone)').matches || 
          (window.navigator as any).standalone === true;
