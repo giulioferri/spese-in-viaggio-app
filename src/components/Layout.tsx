@@ -8,13 +8,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User } from "lucide-react";
+import { Menu, User, X } from "lucide-react";
 
 export default function Layout() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { profile } = useProfile();
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   const handleSignOut = async () => {
     await signOut();
@@ -41,7 +42,17 @@ export default function Layout() {
               <span className="text-xl font-bold">Spese Trasferta</span>
             </Link>
           </div>
-          <nav className="flex items-center gap-4">
+          
+          {/* Mobile menu button */}
+          <button 
+            className="md:hidden flex items-center"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+          
+          {/* Desktop navigation */}
+          <nav className="hidden md:flex items-center gap-4">
             <Link
               to="/"
               className={cn(
@@ -91,6 +102,75 @@ export default function Layout() {
             </Link>
           </nav>
         </div>
+        
+        {/* Mobile navigation menu */}
+        {mobileMenuOpen && (
+          <div className={cn(
+            "md:hidden py-2 px-4",
+            paletteBackgrounds[profile.palette] || "bg-[#009fef]"
+          )}>
+            <div className="flex flex-col space-y-2">
+              <Link
+                to="/"
+                className={cn(
+                  "px-4 py-2 text-white hover:bg-white/20 rounded-md",
+                  "flex items-center"
+                )}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Home
+              </Link>
+              <Link
+                to="/summary"
+                className={cn(
+                  "px-4 py-2 text-white hover:bg-white/20 rounded-md",
+                  "flex items-center"
+                )}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Riepilogo
+              </Link>
+              {user && (
+                <div className="px-4 py-2 text-white">
+                  {user.email}
+                </div>
+              )}
+              <div className="px-4 py-2">
+                <button 
+                  onClick={() => {
+                    setShowProfileModal(true);
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex items-center text-white hover:bg-white/20 rounded-md px-2 py-1"
+                >
+                  <span className="mr-2">Profilo</span>
+                  <Avatar className="h-6 w-6">
+                    {profile.photo ? (
+                      <AvatarImage src={profile.photo} alt="Foto profilo" />
+                    ) : (
+                      <AvatarFallback>
+                        <User size={12} />
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
+                </button>
+              </div>
+              <Link
+                to="/login"
+                onClick={() => {
+                  handleSignOut();
+                  setMobileMenuOpen(false);
+                }}
+                className={cn(
+                  "px-4 py-2 text-white hover:bg-white/20 rounded-md",
+                  "flex items-center"
+                )}
+              >
+                Esci
+              </Link>
+            </div>
+          </div>
+        )}
       </header>
       <main className="flex-1 container py-6">
         <Outlet />
@@ -102,4 +182,3 @@ export default function Layout() {
     </div>
   );
 }
-
