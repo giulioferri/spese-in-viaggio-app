@@ -4,7 +4,8 @@ import App from './App.tsx';
 import './index.css';
 import { registerServiceWorker } from './registerSW';
 
-// Registra il service worker per abilitare la funzionalità PWA
+// Register the service worker to enable PWA functionality
+console.log('Initializing application and registering service worker...');
 registerServiceWorker();
 
 createRoot(document.getElementById("root")!).render(
