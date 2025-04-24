@@ -93,13 +93,13 @@ export default function Index() {
     <div className="space-y-6">
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex justify-between items-center">
-            <span>Dettagli Trasferta</span>
+          <CardTitle className="text-lg flex flex-col md:flex-row md:justify-between md:items-center gap-2">
             {user && (
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm text-muted-foreground order-1 md:order-2">
                 Utente: {user.email} (ID: {user.id.substring(0, 8)}...)
               </span>
             )}
+            <span className="order-2 md:order-1">Dettagli Trasferta</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
