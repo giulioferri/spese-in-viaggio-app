@@ -1,4 +1,19 @@
 
+// Esponiamo un ascoltatore di eventi per il prompt di installazione
+let deferredPrompt: any = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  // Previene la visualizzazione automatica del prompt
+  e.preventDefault();
+  // Salva l'evento per poterlo usare più tardi
+  deferredPrompt = e;
+  // Aggiorna UI per mostrare un pulsante di installazione
+  console.log('PWA è installabile, evento salvato');
+  
+  // Invia un evento customizzato che altri componenti possono intercettare
+  window.dispatchEvent(new CustomEvent('pwaInstallable'));
+});
+
 export function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', async () => {
@@ -70,4 +85,31 @@ export function applyUpdate() {
 export function isPWA() {
   return window.matchMedia('(display-mode: standalone)').matches || 
          (window.navigator as any).standalone === true;
+}
+
+// Nuova funzione per installare la PWA
+export function installPWA() {
+  if (deferredPrompt) {
+    // Mostra il prompt di installazione
+    deferredPrompt.prompt();
+    
+    // Attendi che l'utente risponda al prompt
+    deferredPrompt.userChoice.then((choiceResult: {outcome: string}) => {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('Utente ha accettato di installare la PWA');
+      } else {
+        console.log('Utente ha rifiutato di installare la PWA');
+      }
+      // Pulisci la variabile, può essere usata solo una volta
+      deferredPrompt = null;
+    });
+  } else {
+    console.log('La PWA è già installata o non può essere installata su questo dispositivo/browser');
+    alert('L\'app è già installata o questo browser non supporta l\'installazione di PWA.');
+  }
+}
+
+// Controlla se la PWA può essere installata
+export function canInstallPWA() {
+  return !!deferredPrompt;
 }

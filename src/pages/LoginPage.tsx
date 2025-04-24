@@ -6,14 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, LogIn } from "lucide-react";
+import { Loader2, LogIn, Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { canInstallPWA, installPWA } from "@/registerSW";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const { signIn, signUp, signInWithGoogle, isLoading, user } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
+  const [canInstall, setCanInstall] = useState(false);
   const navigate = useNavigate();
   
   useEffect(() => {
@@ -26,6 +28,21 @@ export default function LoginPage() {
       console.log("🔑 LoginPage: User already logged in, redirecting to home");
       navigate("/");
     }
+
+    // Verifica se la PWA può essere installata all'avvio
+    setCanInstall(canInstallPWA());
+
+    // Aggiorna lo stato se l'app diventa installabile
+    const handlePwaInstallable = () => {
+      console.log("PWA installabile rilevata");
+      setCanInstall(true);
+    };
+    
+    window.addEventListener('pwaInstallable', handlePwaInstallable);
+    
+    return () => {
+      window.removeEventListener('pwaInstallable', handlePwaInstallable);
+    };
   }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,6 +60,10 @@ export default function LoginPage() {
     await signInWithGoogle();
   };
 
+  const handleInstall = () => {
+    installPWA();
+  };
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-secondary/20 px-4">
       <Card className="w-full max-w-md">
@@ -53,6 +74,19 @@ export default function LoginPage() {
               ? "Accedi al tuo account per continuare" 
               : "Crea un nuovo account per iniziare"}
           </CardDescription>
+          
+          {canInstall && (
+            <div className="pt-2">
+              <Button 
+                onClick={handleInstall} 
+                variant="outline" 
+                className="w-full flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Installa App
+              </Button>
+            </div>
+          )}
         </CardHeader>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-4">

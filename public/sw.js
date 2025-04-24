@@ -1,10 +1,11 @@
 
 // Service Worker
-const CACHE_NAME = 'spese-cache-v7';
+const CACHE_NAME = 'spese-cache-v8';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/manifest.json'
+  '/manifest.json',
+  '/placeholder.svg'
 ];
 
 // Install event: opens the cache and adds resources
@@ -80,19 +81,22 @@ self.addEventListener('fetch', (event) => {
       .then(response => {
         // Cache successful responses
         if (response && response.status === 200) {
-          try {
-            const responseToCache = response.clone();
-            caches.open(CACHE_NAME).then(cache => {
-              // Try to cache the response, but don't worry if it fails
+          const responseToCache = response.clone();
+          
+          // Safe caching with error handling
+          caches.open(CACHE_NAME)
+            .then(cache => {
               try {
-                cache.put(event.request, responseToCache);
+                // Solo URL http/https
+                if (url.protocol === 'http:' || url.protocol === 'https:') {
+                  cache.put(event.request, responseToCache)
+                    .catch(err => console.warn('Errore nel caching:', err));
+                }
               } catch (err) {
-                console.warn('Service Worker: Unable to cache resource:', event.request.url, err);
+                console.warn('Errore generale durante il caching:', err);
               }
-            });
-          } catch (err) {
-            console.warn('Service Worker: Caching error:', err);
-          }
+            })
+            .catch(err => console.warn('Errore nell\'aprire la cache:', err));
         }
         return response;
       })
@@ -111,14 +115,13 @@ self.addEventListener('fetch', (event) => {
           // For image resources that fail to load
           if (event.request.url.match(/\.(png|jpg|jpeg|gif|webp|svg)$/)) {
             console.log('Service Worker: Image resource not available:', event.request.url);
-            // Return a transparent pixel instead of a full response
-            return new Response(
-              new Blob(
-                [new Uint8Array([0, 0, 0, 0])], 
-                {type: 'image/png'}
-              ),
-              {status: 200}
-            );
+            // Return a placeholder image
+            return caches.match('/placeholder.svg').then(placeholderResponse => {
+              return placeholderResponse || new Response('Image not available', {
+                status: 404,
+                headers: {'Content-Type': 'text/plain'}
+              });
+            });
           }
           
           return new Response('Risorsa non disponibile offline', {
