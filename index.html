@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -24,6 +25,16 @@
     <link rel="apple-touch-startup-image" href="/splash/apple-splash-1125-2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" />
     <link rel="apple-touch-startup-image" href="/splash/apple-splash-828-1792.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)" />
 
+    <!-- PWA feature detection -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js');
+        });
+      }
+    </script>
+
+    <!-- Open Graph metadata -->
     <meta property="og:title" content="spese-in-viaggio-app" />
     <meta property="og:description" content="Lovable Generated Project" />
     <meta property="og:type" content="website" />
