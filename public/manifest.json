@@ -9,21 +9,15 @@
   "theme_color": "#009fef",
   "icons": [
     {
-      "src": "favicon.ico",
-      "sizes": "64x64",
-      "type": "image/x-icon",
-      "purpose": "any"
-    },
-    {
-      "src": "placeholder.svg",
+      "src": "/lovable-uploads/0.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "placeholder.svg", 
+      "src": "/lovable-uploads/0.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any"
     }
   ]
