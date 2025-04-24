@@ -18,7 +18,7 @@ export function ExpenseFields({
   disabled 
 }: ExpenseFieldsProps) {
   return (
-    <div className="grid grid-cols-[1fr,2fr] gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-[1fr,2fr] gap-4">
       <div className="space-y-2">
         <Label htmlFor="amount">Importo (€)</Label>
         <Input
