@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +21,9 @@ function generateId() {
 export function PhotoUpload({ location, date, photoUrl, onPhotoUploaded, disabled }: PhotoUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
 
   const handlePhotoChange = async (file: File) => {
     setError("");
@@ -78,35 +80,43 @@ export function PhotoUpload({ location, date, photoUrl, onPhotoUploaded, disable
     }
   };
 
-  const handleCapture = async () => {
+  const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      const video = document.createElement('video');
-      video.srcObject = stream;
-      await video.play();
-
-      // Crea un canvas per catturare l'immagine
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      ctx?.drawImage(video, 0, 0);
-
-      // Converte il canvas in un file
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const file = new File([blob], "camera-photo.jpg", { type: "image/jpeg" });
-          handlePhotoChange(file);
-        }
-        
-        // Chiudi lo stream della fotocamera
-        stream.getTracks().forEach(track => track.stop());
-      }, 'image/jpeg');
-
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }
+      });
+      setStream(mediaStream);
+      setIsDialogOpen(true);
     } catch (err) {
       console.error("Error accessing camera:", err);
       setError("Errore nell'accesso alla fotocamera");
     }
+  };
+
+  const handleCapture = () => {
+    if (!videoRef) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.videoWidth;
+    canvas.height = videoRef.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx?.drawImage(videoRef, 0, 0);
+
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const file = new File([blob], "camera-photo.jpg", { type: "image/jpeg" });
+        handlePhotoChange(file);
+      }
+      stopCamera();
+    }, 'image/jpeg');
+  };
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    setIsDialogOpen(false);
   };
 
   return (
@@ -137,25 +147,55 @@ export function PhotoUpload({ location, date, photoUrl, onPhotoUploaded, disable
             <p className="text-sm text-muted-foreground mb-2">
               Carica una foto della spesa
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-col space-y-2">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => document.getElementById('photo-upload')?.click()}
                 disabled={isUploading || disabled}
+                className="w-full"
               >
                 <Image className="mr-2 h-4 w-4" />
                 Scegli foto
               </Button>
-              <Button
-                type="button"
-                variant="default"
-                onClick={handleCapture}
-                disabled={isUploading || disabled}
-              >
-                <Camera className="mr-2 h-4 w-4" />
-                Scatta foto
-              </Button>
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="default"
+                    onClick={startCamera}
+                    disabled={isUploading || disabled}
+                    className="w-full"
+                  >
+                    <Camera className="mr-2 h-4 w-4" />
+                    Scatta foto
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <div className="flex flex-col items-center space-y-4">
+                    <video
+                      ref={ref => {
+                        setVideoRef(ref);
+                        if (ref && stream) {
+                          ref.srcObject = stream;
+                          ref.play();
+                        }
+                      }}
+                      autoPlay
+                      playsInline
+                      className="w-full rounded-lg"
+                    />
+                    <div className="flex gap-2">
+                      <Button onClick={handleCapture} type="button">
+                        Scatta
+                      </Button>
+                      <Button onClick={stopCamera} variant="outline" type="button">
+                        Annulla
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
             <Input
               id="photo-upload"
