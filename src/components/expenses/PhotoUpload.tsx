@@ -1,9 +1,11 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Camera } from "lucide-react";
+import { Camera, Image } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 
 interface PhotoUploadProps {
   location: string;
@@ -21,9 +23,8 @@ export function PhotoUpload({ location, date, photoUrl, onPhotoUploaded, disable
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState("");
 
-  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (file: File) => {
     setError("");
-    const file = e.target.files?.[0];
     if (!file) return;
 
     if (file.size > 10 * 1024 * 1024) {
@@ -70,6 +71,44 @@ export function PhotoUpload({ location, date, photoUrl, onPhotoUploaded, disable
     }
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handlePhotoChange(file);
+    }
+  };
+
+  const handleCapture = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      await video.play();
+
+      // Crea un canvas per catturare l'immagine
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(video, 0, 0);
+
+      // Converte il canvas in un file
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const file = new File([blob], "camera-photo.jpg", { type: "image/jpeg" });
+          handlePhotoChange(file);
+        }
+        
+        // Chiudi lo stream della fotocamera
+        stream.getTracks().forEach(track => track.stop());
+      }, 'image/jpeg');
+
+    } catch (err) {
+      console.error("Error accessing camera:", err);
+      setError("Errore nell'accesso alla fotocamera");
+    }
+  };
+
   return (
     <div className="space-y-2">
       <Label htmlFor="photo">Foto della spesa</Label>
@@ -98,18 +137,33 @@ export function PhotoUpload({ location, date, photoUrl, onPhotoUploaded, disable
             <p className="text-sm text-muted-foreground mb-2">
               Carica una foto della spesa
             </p>
-            <Label
-              htmlFor="photo-upload"
-              className="cursor-pointer bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-            >
-              {isUploading ? "Caricamento..." : "Scegli foto"}
-            </Label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => document.getElementById('photo-upload')?.click()}
+                disabled={isUploading || disabled}
+              >
+                <Image className="mr-2 h-4 w-4" />
+                Scegli foto
+              </Button>
+              <Button
+                type="button"
+                variant="default"
+                onClick={handleCapture}
+                disabled={isUploading || disabled}
+              >
+                <Camera className="mr-2 h-4 w-4" />
+                Scatta foto
+              </Button>
+            </div>
             <Input
               id="photo-upload"
               type="file"
               accept="image/*"
+              capture="environment"
               className="hidden"
-              onChange={handlePhotoChange}
+              onChange={handleFileSelect}
               disabled={isUploading || disabled}
             />
           </div>
