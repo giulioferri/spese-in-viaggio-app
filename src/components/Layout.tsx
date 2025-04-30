@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import ProfileModal from "./ProfileModal";
+import ThemeToggle from "./ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useState } from "react";
@@ -76,6 +77,7 @@ export default function Layout() {
                 {user.email?.substring(0, 15)}...
               </span>
             )}
+            <ThemeToggle />
             <button 
               onClick={() => setShowProfileModal(true)}
               className="focus:outline-none"
@@ -135,6 +137,9 @@ export default function Layout() {
                   {user.email}
                 </div>
               )}
+              <div className="px-4 py-2">
+                <ThemeToggle />
+              </div>
               <div className="px-4 py-2">
                 <button 
                   onClick={() => {

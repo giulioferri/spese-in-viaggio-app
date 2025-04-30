@@ -1,5 +1,5 @@
 
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useState, createContext, useContext } from "react";
 import { useProfile } from "@/hooks/useProfile";
 
 // CSS variable names to switch the tailwind palette
@@ -18,9 +18,42 @@ const paletteMap = {
   },
 };
 
+type Theme = "light" | "dark";
+
+interface ThemeContextType {
+  theme: Theme;
+  toggleTheme: () => void;
+}
+
+const ThemeContext = createContext<ThemeContextType>({
+  theme: "light",
+  toggleTheme: () => {},
+});
+
+export const useTheme = () => useContext(ThemeContext);
+
 export default function ThemeProvider({ children }: { children: ReactNode }) {
   const { profile } = useProfile();
+  const [theme, setTheme] = useState<Theme>(() => {
+    // Check for saved theme preference or system preference
+    const savedTheme = localStorage.getItem("theme") as Theme;
+    if (savedTheme) return savedTheme;
+    
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  });
 
+  // Update body class for dark mode
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  // Update palette colors
   useEffect(() => {
     const selected = paletteMap[profile.palette || "default"];
     const root = document.documentElement;
@@ -29,5 +62,13 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
     }
   }, [profile.palette]);
 
-  return <>{children}</>;
+  const toggleTheme = () => {
+    setTheme(prevTheme => prevTheme === "light" ? "dark" : "light");
+  };
+
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
 }
