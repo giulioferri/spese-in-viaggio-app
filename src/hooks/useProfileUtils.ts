@@ -63,8 +63,8 @@ export async function getOrCreateUserId(): Promise<string> {
 }
 
 // Validazione palette
-export function validatePalette(palette?: string): "default" | "green" | "red" {
-  if (palette === "default" || palette === "green" || palette === "red") {
+export function validatePalette(palette?: string): "default" | "green" | "red" | "ochre" {
+  if (palette === "default" || palette === "green" || palette === "red" || palette === "ochre") {
     return palette;
   }
   return "default";

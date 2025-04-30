@@ -7,7 +7,7 @@ import { useProfileUpdate } from "./useProfileUpdate";
 export type UserProfile = {
   id?: string; // UUID as string
   photo?: string;
-  palette: "default" | "green" | "red";
+  palette: "default" | "green" | "red" | "ochre";
 };
 
 export function useProfile() {

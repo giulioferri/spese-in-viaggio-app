@@ -1,13 +1,14 @@
 
 import { Palette } from "lucide-react";
 
-type PaletteValue = "default" | "green" | "red";
+type PaletteValue = "default" | "green" | "red" | "ochre";
 type Option = { value: PaletteValue; label: string; color: string };
 
 const paletteOptions: Option[] = [
   { value: "default", label: "Default", color: "#009fef" },
   { value: "green", label: "Verde", color: "#23c69e" },
   { value: "red", label: "Rosso", color: "#ff325b" },
+  { value: "ochre", label: "Giallo Ocra", color: "#F5A623" },
 ];
 
 type Props = {
