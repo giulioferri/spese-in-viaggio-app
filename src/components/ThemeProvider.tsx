@@ -1,3 +1,4 @@
+
 import { ReactNode, useEffect, useState, createContext, useContext } from "react";
 import { useProfile } from "@/hooks/useProfile";
 
@@ -17,7 +18,7 @@ const paletteMap = {
   },
   ochre: {
     "--primary": "43 96% 58%", // #F5A623 (giallo ocra)
-    "--primary-foreground": "0 0% 100%",
+    "--primary-foreground": "240 10% 3.9%", // #222222 per il testo scuro
   },
 };
 

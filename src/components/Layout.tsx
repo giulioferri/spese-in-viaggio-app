@@ -28,14 +28,25 @@ export default function Layout() {
     default: "bg-[#009fef]",
     green: "bg-[#23c69e]",
     red: "bg-[#ff325b]",
+    ochre: "bg-[#F5A623]",
   };
+
+  // Determina le classi per il testo e hover in base alla palette
+  const getTextClasses = (palette: string) => {
+    if (palette === "ochre") {
+      return "text-[#222222] hover:bg-black/10 hover:text-[#000000]";
+    }
+    return "text-white hover:bg-white/20 hover:text-[#333333]";
+  };
+
+  const textClasses = getTextClasses(profile.palette);
 
   return (
     <div className="flex min-h-screen flex-col">
       <header className={cn(
         "sticky top-0 z-10 border-b",
         paletteBackgrounds[profile.palette] || "bg-[#009fef]",
-        "text-white"
+        profile.palette === "ochre" ? "text-[#222222]" : "text-white"
       )}>
         <div className="container flex h-14 items-center justify-between">
           <div className="flex items-center gap-2">
@@ -58,7 +69,7 @@ export default function Layout() {
               to="/"
               className={cn(
                 buttonVariants({ variant: "ghost", size: "sm" }),
-                "text-white hover:bg-white/20 hover:text-[#333333]"
+                textClasses
               )}
             >
               Home
@@ -67,13 +78,13 @@ export default function Layout() {
               to="/summary"
               className={cn(
                 buttonVariants({ variant: "ghost", size: "sm" }),
-                "text-white hover:bg-white/20 hover:text-[#333333]"
+                textClasses
               )}
             >
               Riepilogo
             </Link>
             {user && (
-              <span className="text-white text-xs">
+              <span className={profile.palette === "ochre" ? "text-[#222222] text-xs" : "text-white text-xs"}>
                 {user.email?.substring(0, 15)}...
               </span>
             )}
@@ -97,7 +108,7 @@ export default function Layout() {
               onClick={handleSignOut}
               className={cn(
                 buttonVariants({ variant: "ghost", size: "sm" }),
-                "text-white hover:bg-white/20 hover:text-[#333333]"
+                textClasses
               )}
             >
               Esci
@@ -115,8 +126,8 @@ export default function Layout() {
               <Link
                 to="/"
                 className={cn(
-                  "px-4 py-2 text-white hover:bg-white/20 rounded-md",
-                  "flex items-center"
+                  "px-4 py-2 rounded-md flex items-center",
+                  profile.palette === "ochre" ? "text-[#222222] hover:bg-black/10" : "text-white hover:bg-white/20"
                 )}
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -125,15 +136,18 @@ export default function Layout() {
               <Link
                 to="/summary"
                 className={cn(
-                  "px-4 py-2 text-white hover:bg-white/20 rounded-md",
-                  "flex items-center"
+                  "px-4 py-2 rounded-md flex items-center",
+                  profile.palette === "ochre" ? "text-[#222222] hover:bg-black/10" : "text-white hover:bg-white/20"
                 )}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Riepilogo
               </Link>
               {user && (
-                <div className="px-4 py-2 text-white">
+                <div className={cn(
+                  "px-4 py-2",
+                  profile.palette === "ochre" ? "text-[#222222]" : "text-white"
+                )}>
                   {user.email}
                 </div>
               )}
@@ -146,7 +160,10 @@ export default function Layout() {
                     setShowProfileModal(true);
                     setMobileMenuOpen(false);
                   }}
-                  className="flex items-center text-white hover:bg-white/20 rounded-md px-2 py-1"
+                  className={cn(
+                    "flex items-center rounded-md px-2 py-1",
+                    profile.palette === "ochre" ? "text-[#222222] hover:bg-black/10" : "text-white hover:bg-white/20"
+                  )}
                 >
                   <span className="mr-2">Profilo</span>
                   <Avatar className="h-6 w-6">
@@ -167,8 +184,8 @@ export default function Layout() {
                   setMobileMenuOpen(false);
                 }}
                 className={cn(
-                  "px-4 py-2 text-white hover:bg-white/20 rounded-md",
-                  "flex items-center"
+                  "px-4 py-2 rounded-md flex items-center",
+                  profile.palette === "ochre" ? "text-[#222222] hover:bg-black/10" : "text-white hover:bg-white/20"
                 )}
               >
                 Esci
