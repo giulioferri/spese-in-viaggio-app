@@ -1,5 +1,5 @@
 
-import { Trip, Expense } from "@/lib/tripStorage";
+import { Trip, Expense } from "@/lib/tripStorage/types";
 
 interface PhotoItem {
   name: string;

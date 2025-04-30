@@ -11,7 +11,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Download, Trash2 } from "lucide-react";
-import { Trip } from "@/lib/tripStorage";
+import { Trip } from "@/lib/tripStorage/types";
 import { AlertDialog, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { DeleteTripDialog } from "@/components/summary/DeleteTripDialog";
 
