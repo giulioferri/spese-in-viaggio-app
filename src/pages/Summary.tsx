@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -191,6 +190,85 @@ export default function Summary() {
       setSelectedTrips([]);
     } else {
       setSelectedTrips(trips.map(trip => ({ id: trip.id })));
+    }
+  };
+
+  const exportTripToZip = async (trip: any) => {
+    try {
+      // Create CSV content for this single trip
+      const headers = ['Luogo', 'Data', 'Importo', 'Descrizione'];
+      let csvContent = headers.join(';') + '\n';
+      
+      trip.expenses.forEach((exp: any) => {
+        const euroAmount = Number(exp.amount)
+          .toFixed(2)
+          .replace('.', ',');
+        const row = [
+          trip.location,
+          new Date(trip.date).toLocaleDateString('it-IT'),
+          euroAmount,
+          (typeof exp.comment === 'string' ? exp.comment.replace(/[\n\r;]/g, ' ') : '')
+        ];
+        csvContent += row.join(';') + '\n';
+      });
+
+      const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+
+      // Get photos for this trip
+      const photoPromises = trip.expenses
+        .filter((exp: any) => exp.photoUrl)
+        .map(async (exp: any) => {
+          try {
+            const response = await fetch(exp.photoUrl);
+            const blob = await response.blob();
+            return {
+              name: `${trip.location}_${exp.id}${getFileExtension(exp.photoUrl)}`,
+              blob
+            };
+          } catch (error) {
+            console.error('Errore nel download della foto:', error);
+            return null;
+          }
+        });
+
+      const photos = (await Promise.all(photoPromises)).filter(photo => photo !== null);
+
+      const JSZip = await import('jszip');
+      const zip = new JSZip.default();
+
+      // Add CSV file
+      zip.file('riepilogo_spese.csv', csvBlob);
+
+      // Add photos
+      photos.forEach(photo => {
+        if (photo) {
+          zip.file(`photos/${photo.name}`, photo.blob);
+        }
+      });
+
+      // Generate and download the ZIP file
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const zipUrl = URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = zipUrl;
+      link.download = `trasferta_${trip.location}_${trip.date}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(zipUrl);
+
+      // Show success notification
+      toast({
+        title: "Esportazione completata",
+        description: "Il file ZIP è stato scaricato con successo.",
+      });
+    } catch (error) {
+      console.error('Errore durante l\'esportazione:', error);
+      toast({
+        title: "Errore durante l'esportazione",
+        description: "Si è verificato un errore durante l'esportazione della trasferta.",
+        variant: "destructive",
+      });
     }
   };
 
