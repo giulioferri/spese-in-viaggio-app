@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileArchive } from "lucide-react";
+import { FileArchive } from "lucide-react";
 import { getTrips, deleteTrip, Trip } from "@/lib/tripStorage";
 import { useToast } from "@/hooks/use-toast";
 import { SummaryTable } from "@/components/summary/SummaryTable";
@@ -26,18 +26,6 @@ export default function Summary() {
   useEffect(() => {
     loadTrips();
   }, []);
-
-  const exportToCSV = () => {
-    const csvBlob = createTripCSV(trips);
-    const url = URL.createObjectURL(csvBlob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'spese_trasferta.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
 
   const exportSelectedTripsToZip = async () => {
     if (selectedTrips.length === 0) {
@@ -141,10 +129,6 @@ export default function Summary() {
               Scarica selezionate
             </Button>
           )}
-          <Button onClick={exportToCSV} className="bg-primary">
-            <Download className="mr-2 h-4 w-4" />
-            Esporta CSV
-          </Button>
         </div>
       </div>
 
