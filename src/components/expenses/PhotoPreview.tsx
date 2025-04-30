@@ -13,7 +13,8 @@ export function PhotoPreview({ photoUrl, onRemove, disabled }: PhotoPreviewProps
       <img
         src={photoUrl}
         alt="Anteprima scontrino"
-        className="mx-auto max-h-48 rounded-md object-contain"
+        className="mx-auto max-h-48 rounded-md object-contain cursor-pointer"
+        onClick={() => window.open(photoUrl, '_blank')}
       />
       <Button
         type="button"

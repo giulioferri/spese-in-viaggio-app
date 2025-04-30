@@ -49,7 +49,8 @@ export default function ExpenseList({
                 <img
                   src={expense.photoUrl}
                   alt="Scontrino"
-                  className="w-16 h-16 object-cover rounded-md"
+                  className="w-16 h-16 object-cover rounded-md cursor-pointer"
+                  onClick={() => window.open(expense.photoUrl, '_blank')}
                 />
               </div>
               <div className="flex-1 min-w-0">
