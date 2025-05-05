@@ -53,10 +53,10 @@ export const fetchTripPhotos = async (trips: Trip[]): Promise<PhotoItem[]> => {
         try {
           const response = await fetch(exp.photoUrl);
           const blob = await response.blob();
-          // Create folder structure by date (YYYY-MM-DD)
-          const tripDate = trip.date; // Already in YYYY-MM-DD format
+          // Crea la struttura delle cartelle con il formato yyyy-mm-dd__luogo
+          const folderName = `${trip.date}__${trip.location}`;
           return {
-            name: `${tripDate}/${trip.location}_${exp.id}${getFileExtension(exp.photoUrl)}`,
+            name: `${folderName}/${exp.id}${getFileExtension(exp.photoUrl)}`,
             blob
           };
         } catch (error) {
